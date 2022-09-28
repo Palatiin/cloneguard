@@ -7,10 +7,38 @@ from coinwatch.settings import GITHUB_API_ACCESS_TOKEN
 
 
 class GitHubAPI:
+    """GitHub API client.
+
+    https://docs.github.com/en/rest
+    """
+
     base_url = "https://api.github.com"
+    _headers = {
+        "Accept": "application/vnd.github+json",
+        "Authorization": f"Bearer {GITHUB_API_ACCESS_TOKEN}",
+    }
+
+    def get_pull(self, owner: str, repo: str, pull_number: int):
+        """Get specific pull from project on GitHub.
+
+        https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
+
+        Args:
+            owner (str): Owner of the repository
+            repo (str): Name of the repository
+            pull_number (int): ID of wanted pull
+
+        Returns:
+            Pull request if found else None.
+        """
+        response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}", headers=self._headers)
+        if response.status_code != 200:
+            return
+
+        return response.json()
 
     def get_issue(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
-        """Get specific issue from github project.
+        """Get specific issue from project on GitHub.
 
         https://docs.github.com/en/rest/issues/issues#get-an-issue
 
@@ -21,13 +49,8 @@ class GitHubAPI:
 
         Returns:
             Issue data if found else None.
-
         """
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {GITHUB_API_ACCESS_TOKEN}",
-        }
-        response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}", headers=headers)
+        response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}", headers=self._headers)
         if response.status_code != 200:
             return
 
