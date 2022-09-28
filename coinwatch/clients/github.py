@@ -19,7 +19,7 @@ class GitHubAPI:
     }
 
     def get_pull(self, owner: str, repo: str, pull_number: int):
-        """Get specific pull from project on GitHub.
+        """Get specific pull in project on GitHub.
 
         https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
 
@@ -37,8 +37,27 @@ class GitHubAPI:
 
         return response.json()
 
+    def get_commits_on_pull(self, owner: str, repo: str, pull_number: int):
+        """Get commits on a specific PR in project on GitHub.
+
+        https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request
+
+        Args:
+            owner (str): Owner of the repository
+            repo (str): Name of the repository
+            pull_number (int): ID of wanted pull
+
+        Returns:
+            Commits on a PR if found else None.
+        """
+        response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}/commits")
+        if response.status_code != 200:
+            return
+
+        return response.json()
+
     def get_issue(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
-        """Get specific issue from project on GitHub.
+        """Get specific issue in project on GitHub.
 
         https://docs.github.com/en/rest/issues/issues#get-an-issue
 
