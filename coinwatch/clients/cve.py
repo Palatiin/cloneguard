@@ -10,8 +10,8 @@ from typing import Dict, List, Optional
 
 
 class VulnerabilityStatus(str, Enum):
-    analyzed = "Analyzed"
-    ...
+    analyzed = "Analyzed"  # CVE-2013-4165
+    modified = "Modified"  # CVE-2018-17144
 
 
 @dataclass
@@ -39,6 +39,7 @@ class CVE:
     metrics: Dict
     weaknesses: List[Weakness]
     references: List[Reference]
+    json: Dict
 
 
 class CVEClient:
@@ -100,6 +101,7 @@ class CVEClient:
             metrics=cve_data["metrics"],
             weaknesses=weaknesses,
             references=references,
+            json=cve_data,
         )
 
     def cve_id(self, cve: str) -> Optional[CVE]:
@@ -122,3 +124,10 @@ class CVEClient:
             return
 
         return self._parse_output(response.json())
+
+
+if __name__ == "__main__":
+    in_cve = "CVE-2018-17144"
+    cc = CVEClient()
+    cve: CVE = cc.cve_id(in_cve)
+    pass
