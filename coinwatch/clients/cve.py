@@ -1,0 +1,124 @@
+# cve.py
+
+import re
+import requests
+import datetime
+from enum import Enum
+from collections import defaultdict
+from dataclasses import dataclass
+from typing import Dict, List, Optional
+
+
+class VulnerabilityStatus(str, Enum):
+    analyzed = "Analyzed"
+    ...
+
+
+@dataclass
+class Weakness:
+    source: str
+    type_: str
+    descriptions: Dict[str, List[str]]
+
+
+@dataclass
+class Reference:
+    url: str
+    source: str
+    tags: List[str] = list
+
+
+@dataclass
+class CVE:
+    id_: str
+    source_identifier: str
+    published: datetime.datetime
+    last_modified: datetime.datetime
+    vulnerability_status: VulnerabilityStatus
+    descriptions: Dict[str, List[str]]
+    metrics: Dict
+    weaknesses: List[Weakness]
+    references: List[Reference]
+
+
+class CVEClient:
+    """Client for CVE API.
+
+    https://nvd.nist.gov/developers/vulnerabilities
+    """
+
+    base_url: str = "https://services.nvd.nist.gov/rest/json/cves/2.0"
+    _re_cve = re.compile(r"(?=CVE-\d{4}-\d+$)")
+
+    @staticmethod
+    def _parse_output(data: Dict) -> Optional[CVE]:
+        """Parse response from API into CVE data model.
+
+        Args:
+            data (Dict): CVE API response
+
+        Returns:
+            CVE data or None.
+        """
+        def _parse_descriptions(descriptions: List) -> Dict[str, List[str]]:
+            descs = defaultdict(list)
+            for description in descriptions:
+                lang, value = description.values()
+                descs[lang].append(value)
+            return descs
+
+        if data["totalResults"] == 0:
+            return None
+        if data["totalResults"] > 1:
+            print("More than one CVE found")
+
+        cve_data = data["vulnerabilities"][0]["cve"]
+
+        descriptions = _parse_descriptions(cve_data["descriptions"])
+
+        weaknesses = []
+        for weakness in cve_data["weaknesses"]:
+            weaknesses.append(
+                Weakness(
+                    source=weakness["source"],
+                    type_=weakness["type"],
+                    descriptions=_parse_descriptions(weakness["description"]),
+                )
+            )
+
+        references = []
+        for reference in cve_data["references"]:
+            references.append(Reference(**reference))
+
+        return CVE(
+            id_=cve_data["id"],
+            source_identifier=cve_data["sourceIdentifier"],
+            published=datetime.datetime.fromisoformat(cve_data["published"]),
+            last_modified=datetime.datetime.fromisoformat(cve_data["lastModified"]),
+            vulnerability_status=cve_data["vulnStatus"],
+            descriptions=descriptions,
+            metrics=cve_data["metrics"],
+            weaknesses=weaknesses,
+            references=references,
+        )
+
+    def cve_id(self, cve: str) -> Optional[CVE]:
+        """Fetch CVE data utilizing API param 'cveId'.
+
+        Args:
+            cve (str): CVE in format 'CVE-{year}-{id}'
+
+        Returns:
+            CVE data or None.
+        """
+        if not cve:
+            return
+        if not self._re_cve.match(cve):
+            return
+
+        response = requests.get(self.base_url, params={"cveId": cve})
+
+        if response.status_code != 200:
+            return
+
+        return self._parse_output(response.json())
