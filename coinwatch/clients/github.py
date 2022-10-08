@@ -3,7 +3,7 @@
 import requests
 from typing import Optional, Dict
 
-from coinwatch.settings import GITHUB_API_ACCESS_TOKEN
+from settings import GITHUB_API_ACCESS_TOKEN  # noqa
 
 
 class GitHubAPI:

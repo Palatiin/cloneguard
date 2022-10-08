@@ -1,4 +1,4 @@
 # __init__.py
 
-from .cve import CVE
 from .cve import CVEClient
+from .github import GitHubAPI
