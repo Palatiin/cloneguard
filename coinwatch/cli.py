@@ -2,8 +2,10 @@
 
 import click
 
+from src.cve_reader import *
+from src.schemas import CVE
 from utils import logger
-from clients import CVE, CVEClient
+from clients import CVEClient, GitHubAPI
 
 
 @click.group()
@@ -20,6 +22,8 @@ def run(cve: str):
     cve: CVE = CVEClient().cve_id(cve)
     print(cve.json)
     logger.info("Scrape CVE done.")
+
+    read_cve(cve)  # NOTE: tags - stats
 
 
 if __name__ == '__main__':
