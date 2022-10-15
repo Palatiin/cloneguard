@@ -6,8 +6,7 @@ from typing import List, Dict
 from bs4 import BeautifulSoup
 
 from .schemas import *
-from utils import logger  # noqa
-from settings import USER_AGENT  # noqa
+from settings import logger, USER_AGENT  # noqa
 
 
 __all__ = ["load_references", "read_cve"]

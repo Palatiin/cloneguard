@@ -4,8 +4,8 @@ import click
 
 from src.cve_reader import *
 from src.schemas import CVE
-from utils import logger
-from clients import CVEClient, GitHubAPI
+from settings import logger
+from clients import CVEClient, GitHubAPI, Git
 
 
 @click.group()
@@ -25,6 +25,15 @@ def run(cve: str):
 
     read_cve(cve)  # NOTE: tags - stats
 
+
+@cli.command()
+@click.argument("url", required=True, type=str)
+def clone(url):
+    """Clone repository."""
+
+    logger.info("Cloning target repository...")
+    Git(url).clone()
+    logger.info("Cloning done.")
 
 if __name__ == '__main__':
     cli()
