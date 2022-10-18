@@ -2,10 +2,10 @@
 
 import click
 
-from src.cve_reader import *
+from src.selector.fixing_commits import get_fixing_commits
 from src.schemas import CVE
 from settings import logger
-from clients import CVEClient, GitHubAPI, Git
+from clients import CVEClient, Git
 
 
 @click.group()
@@ -20,10 +20,11 @@ def run(cve: str):
 
     logger.info("Scrape CVE...")
     cve: CVE = CVEClient().cve_id(cve)
-    print(cve.json)
     logger.info("Scrape CVE done.")
 
-    read_cve(cve)  # NOTE: tags - stats
+    # read_cve(cve)  # NOTE: tags - stats
+    repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+    get_fixing_commits(repository, cve)
 
 
 @cli.command()
