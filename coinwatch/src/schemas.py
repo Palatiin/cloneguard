@@ -6,12 +6,19 @@ from typing import Dict, List
 from dataclasses import dataclass
 
 
-__all__ = ["VulnerabilityStatus", "Weakness", "Reference", "CVE"]
+__all__ = ["VulnerabilityStatus", "ReferenceType", "Weakness", "Reference", "CVE"]
 
 
 class VulnerabilityStatus(str, Enum):
     analyzed = "Analyzed"  # CVE-2013-4165
     modified = "Modified"  # CVE-2018-17144
+
+
+class ReferenceType(str, Enum):
+    undefined = "U"
+    issue = "I"
+    pull = "PR"
+    release_notes = "RN"
 
 
 @dataclass
@@ -26,6 +33,9 @@ class Reference:
     url: str
     source: str
     tags: List[str] = list
+    body: str = str
+    json: dict = dict
+    type_: ReferenceType = ReferenceType.undefined
 
 
 @dataclass
