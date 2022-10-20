@@ -14,7 +14,7 @@ class Git:
     Features:
         * GitHub API utilization for extracting additional info about commits/PRs.
     """
-    api = GitHubAPI
+    api = GitHubAPI()
     _re_url_contents = re.compile(r"[/:](?P<owner>\w+)/(?P<repo>\w+)\.git")
 
     base_path = "_cache/clones"
@@ -36,10 +36,11 @@ class Git:
         if process.returncode != 0:
             logger.error("clients: git: clone: Couldn't clone the repository.")
 
-    def logs(self, before: str, commit_id: Optional[str] = None, tag_range: Optional[str] = None) -> Generator:
+    def logs(self, after: str, before: str, commit_id: Optional[str] = None, tag_range: Optional[str] = None) -> Generator:
         """Get list of logs/commits in repository in reverse chronological order.
 
         Args:
+            after (str): List only commits after this date.
             before (str): List only commits before this date.
             commit_id (Optional[str]): List only commits before this commit.
             tag_range (Optional[str]): List only commits within this tag range.
@@ -50,6 +51,7 @@ class Git:
         command = ["git", "rev-list"]
         if not commit_id and not tag_range:
             commit_id = "origin"
+            command.extend(["--after", after])
             command.extend(["--before", before])
             command.append(commit_id)
         if tag_range:
@@ -60,8 +62,13 @@ class Git:
         hashes = process.stdout.decode("ascii").split()
 
         for _hash in hashes:
-            command = ["git", "show", "--quiet", "--date=iso", _hash]
-            logger.info("git: logs: Command: " + " ".join(command))
-            process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-            commit = process.stdout.decode(errors="replace")
+            commit = self.show(_hash, quiet=True)
             yield _hash, commit
+
+    def show(self, _hash: str, quiet: Optional[bool] = True) -> str:
+        command = ["git", "show", "--quiet" if quiet else "", "--date=iso", _hash]
+        logger.info("git: show: Command: " + " ".join(command))
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        commit = process.stdout.decode(errors="replace")
+
+        return commit
