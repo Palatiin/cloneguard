@@ -1,19 +1,20 @@
 # cve.py
 
-import re
-import os
-import json
-import requests
 import datetime
+import json
+import os
+import re
 from collections import defaultdict
-from typing import Dict, List, Optional, NoReturn
+from typing import Dict, List, NoReturn, Optional
 
+import requests
+from settings import logger  # noqa
 from src.schemas import *  # noqa
-from settings import logger # noqa
 
 
 class CVEClient:
-    """Client for CVE API.
+    """
+    Client for CVE API.
 
     NOTE: currently limited to 5 RQ / rolling 30 sec time window, possible upgrade to 30/30
 
@@ -25,7 +26,8 @@ class CVEClient:
 
     @staticmethod
     def _parse_output(data: Dict) -> Optional[CVE]:
-        """Parse response from API into CVE data model.
+        """
+        Parse response from API into CVE data model.
 
         Args:
             data (Dict): CVE API response
@@ -33,6 +35,7 @@ class CVEClient:
         Returns:
             CVE data or None.
         """
+
         def _parse_descriptions(descriptions: List) -> Dict[str, List[str]]:
             descs = defaultdict(list)
             for description in descriptions:
@@ -76,17 +79,20 @@ class CVEClient:
             json=cve_data,
         )
 
-    def load_cve_from_cache(self, cve: str) -> dict:
+    @staticmethod
+    def load_cve_from_cache(cve: str) -> dict:
         with open(f"_cache/cve/{cve.upper()}", "r") as file:
             cve_data = "".join(file.readlines())
         return json.loads(cve_data)
 
-    def save_cve_to_cache(self, cve: str, cve_data: str) -> NoReturn:
+    @staticmethod
+    def save_cve_to_cache(cve: str, cve_data: str) -> NoReturn:
         with open(f"_cache/cve/{cve.upper()}", "w") as file:
             file.write(cve_data)
 
     def cve_id(self, cve: str) -> Optional[CVE]:
-        """Fetch CVE data utilizing API param 'cveId'.
+        """
+        Fetch CVE data utilizing API param 'cveId'.
 
         Args:
             cve (str): CVE in format 'CVE-{year}-{id}'

@@ -4,7 +4,7 @@ import re
 import subprocess
 from typing import Optional, NoReturn, Generator
 
-from coinwatch.clients import GitHubAPI
+from clients import GitHubAPI  # noqa
 from settings import logger  # noqa
 
 

@@ -1,11 +1,11 @@
 # cli.py
 
 import click
-
-from src.selector.fixing_commits import get_fixing_commits
-from src.schemas import CVE
-from settings import logger
 from clients import CVEClient, Git
+from settings import logger
+from src.cve_reader import load_references
+from src.schemas import CVE
+from src.selector.fixing_commits import get_fixing_commits
 
 
 @click.group()
@@ -17,24 +17,44 @@ def cli():
 @click.argument("cve", required=True, type=str)
 def run(cve: str):
     """Scrape information about CVE."""
-
     logger.info("Scrape CVE...")
     cve: CVE = CVEClient().cve_id(cve)
     logger.info("Scrape CVE done.")
 
-    # read_cve(cve)  # NOTE: tags - stats
     repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+
+    logger.info("Load references...")
+    load_references(repository, cve.references)
+    logger.info("Load references done.")
+
     get_fixing_commits(repository, cve)
 
 
 @cli.command()
-@click.argument("url", required=True, type=str)
-def clone(url):
-    """Clone repository."""
+def test():
+    def test_run(cve):
+        cve: CVE = CVEClient().cve_id(cve)
 
-    logger.info("Cloning target repository...")
-    Git(url).clone()
-    logger.info("Cloning done.")
+        repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+        load_references(repository, cve.references)
 
-if __name__ == '__main__':
+        return get_fixing_commits(repository, cve)
+
+    from tests.test import test_cve_fix_commit_pairs
+
+    for i, test_case in enumerate(test_cve_fix_commit_pairs):
+        logger.info(f"================ Test {i:2} ================")
+        logger.verbose = False
+        try:
+            test_result = test_run(test_case[0]) == test_case[1]
+        except:
+            test_result = False
+
+        if test_result:
+            logger.info("Passed.", v=True)
+        else:
+            logger.error("Failed.", v=True)
+
+
+if __name__ == "__main__":
     cli()

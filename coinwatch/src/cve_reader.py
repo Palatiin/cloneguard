@@ -1,18 +1,16 @@
 # cve_reader.py
 
 import re
-import requests
-from typing import List, Dict, NoReturn
+from typing import Dict, List, NoReturn
 
+import requests
 from bs4 import BeautifulSoup
+from clients import Git  # noqa
+from settings import USER_AGENT, logger  # noqa
 
 from .schemas import *
 
-from clients import Git  # noqa
-from settings import logger, USER_AGENT  # noqa
-
-
-__all__ = ["load_references", "read_cve"]
+__all__ = ["load_references"]
 
 _re_issue = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/issues/(\d+)")
 _re_pull = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/pull/(\d+)")

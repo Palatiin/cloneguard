@@ -1,15 +1,72 @@
 # fixing_commits.py
 
+import json
 import re
-from typing import List
 from datetime import timedelta
 
-from ..schemas import CVE
-
 from clients import Git  # noqa
+from settings import logger  # noqa
 
+from ..schemas import *
 
 CANDIDATES_LIMIT = 10000
+
+
+class FixCommitFinder:
+    work_flow = [
+        "issue_scan",
+        "pull_scan",
+        "release_notes_scan",
+        "default",
+    ]
+
+    def __init__(self, cve: CVE, repo: Git):
+        self.issue = [ref for ref in cve.references if ref.type_ == ReferenceType.issue]
+        self.pull = [ref for ref in cve.references if ref.type_ == ReferenceType.pull]
+        self.release_notes = [ref for ref in cve.references if ref.type_ == ReferenceType.release_notes]
+        self.cve = cve
+        self.repo = repo
+
+    def get_fix_commit(self) -> str:
+        if self.issue:
+            self.issue = self.issue[0]
+            fix_commit = self.issue_scan()
+        elif self.pull:
+            self.pull = self.pull[0]
+            fix_commit = self.pull_scan()
+        elif self.release_notes:
+            self.release_notes = self.release_notes[0]
+            fix_commit = self.release_notes_scan()
+        return fix_commit
+
+    def issue_scan(self):
+        for pulls in self._is_get_pull_reference():
+            for pull in pulls:
+                pull_request = self.repo.api.get_pull(self.repo.owner, self.repo.repo, int(pull))
+                if pull_request["merged"]:
+                    return pull_request["head"]["sha"]
+
+    def pull_scan(self):
+        return "Not Implemented"
+
+    def release_notes_scan(self):
+        return "Not Implemented"
+
+    def _is_get_pull_reference(self):
+        issue_timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, self.issue.json["number"])
+        start_index = len(issue_timeline)
+
+        if self.issue.json["state"] == "closed":
+            for event in issue_timeline[::-1]:
+                start_index -= 1
+                if event["event"] == "closed":
+                    break
+
+        issue_timeline = issue_timeline[:start_index]
+        for event in issue_timeline[::-1]:
+            if event["event"] == "commented":
+                if match := re.findall(r"#(\d+)", event["body"]):
+                    yield match
 
 
 def get_tag_range(cve: CVE) -> str:
@@ -35,32 +92,56 @@ def get_tag_range(cve: CVE) -> str:
         return f"{prev_tag}...{fix_tag}"
 
 
-def commit_selector(commits, selected_weight=0):
+def get_issue_from_references(repo: Git, cve: CVE):
+    for reference in cve.references:
+        if not (match := re.search(f"{repo.owner}/{repo.repo}/issues/(\\d+)", reference.url)):
+            continue
+        issue = repo.api.get_issue(repo.owner, repo.repo, int(match.group(1)))
+
+
+def commit_selector(repo: Git, cve: CVE, commits, selected_weight=0):
+    candidates = []
     for _hash, commit, weight in commits:
         if weight < selected_weight:
             continue
         if not re.search(r"[Mm]erge|[Cc]herry|[Nn]oting", commit):
-            return _hash, commit, weight
+            if match := re.findall(r"CVE-\d+-\d+", commit):
+                if cve.id_ not in match:
+                    continue
+            candidates.append((_hash, commit, weight))
+        elif match := re.search(r"[Mm]erge\s*(?:\w+/\w+|pull request)\s*#(\d+)", commit):
+            pull_request = repo.api.get_pull(repo.owner, repo.repo, int(match.group(1)))
+            if cve.id_ in json.dumps(pull_request):
+                logger.info("selector: fixing_commits: commit_selector: Found CVE in pull request data.")
+                return _hash, commit, weight
+            if match := re.search(r"issue\s*#(\d+)", pull_request["body"]):
+                issue = repo.api.get_issue(repo.owner, repo.repo, int(match.group(1)))
+
     return commits[0]
 
 
-def get_fixing_commits(repo: Git, cve: CVE) -> List[str]:
+def get_fixing_commits(repo: Git, cve: CVE) -> str:
+    finder = FixCommitFinder(cve, repo)
+    return finder.get_fix_commit()
+
     _re_basic_fix_validators = [
         re.compile(r"[Ff]ix|[Bb]ug|[Dd]efect|[Pp]atch"),  # basic
-        re.compile(r"issue\s*(?!#)\d+\b"),  # issue
+        re.compile(r"issue\s*#\d+\b"),  # issue
         re.compile(cve.id_),  # CVE
-        re.compile(r"^\s*\+\s*(.*?//|/?\*).*?" + cve.id_)  # CVE in diff
+        re.compile(r"^\s*\+\s*(.*?//|/?\*).*?" + cve.id_),  # CVE in diff
     ]
 
+    _after = cve.published - timedelta(days=10)
+    _after = _after.strftime("%Y-%m-%d")
     _before = cve.published + timedelta(days=2)
     _before = _before.strftime("%Y-%m-%d")
     candidate_commits = {"count": 0, "hashes": []}
     max_weight = 0
-    for _hash, commit in repo.logs(before=_before, tag_range=get_tag_range(cve)):
+    for _hash, commit in repo.logs(after=_after, before=_before, tag_range=get_tag_range(cve)):
         weight = 0
         for i in range(len(_re_basic_fix_validators)):
             if _re_basic_fix_validators[i].search(commit):
-                weight += (1 << i)
+                weight += 1 << i
 
         if not weight or weight < max_weight:
             continue
@@ -72,6 +153,6 @@ def get_fixing_commits(repo: Git, cve: CVE) -> List[str]:
         if candidate_commits["count"] >= CANDIDATES_LIMIT:
             break
 
-    tmp_fix_commit = commit_selector(candidate_commits["hashes"])
+    tmp_fix_commit = commit_selector(repo, cve, candidate_commits["hashes"])
 
     return [candidate[0] for candidate in candidate_commits["hashes"]]

@@ -104,10 +104,10 @@ class GitHubAPI:
 
         return response.json()
 
-    def get_issue_comments(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
+    def get_issue_timeline(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
         """Get specific issue comments in project on GitHub.
 
-        https://docs.github.com/en/rest/issues/comments#list-issue-comments
+        https://docs.github.com/en/rest/issues/timeline#list-timeline-events-for-an-issue
 
         Args:
             owner (str): Owner of the repository
@@ -118,7 +118,7 @@ class GitHubAPI:
             Issue comments if found else None.
         """
         response = requests.get(
-            f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments", headers=self._headers
+            f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/timeline", headers=self._headers
         )
         if response.status_code != 200:
             return
