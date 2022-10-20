@@ -104,8 +104,23 @@ class GitHubAPI:
 
         return response.json()
 
+    def get_issue_comments(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
+        """Get specific issue comments in project on GitHub.
 
-if __name__ == "__main__":
-    gh = GitHubAPI()
-    issue = gh.get_issue("bitcoin", "bitcoin", 26193)
-    pass
+        https://docs.github.com/en/rest/issues/comments#list-issue-comments
+
+        Args:
+            owner (str): Owner of the repository
+            repo (str): Name of the repository
+            issue_number (int): ID of wanted issue
+
+        Returns:
+            Issue comments if found else None.
+        """
+        response = requests.get(
+            f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/comments", headers=self._headers
+        )
+        if response.status_code != 200:
+            return
+
+        return response.json()
