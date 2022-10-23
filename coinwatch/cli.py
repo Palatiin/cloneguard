@@ -43,9 +43,11 @@ def test():
 
     from tests.test import test_cve_fix_commit_pairs
 
+    logger.verbose = False
+
     for i, test_case in enumerate(test_cve_fix_commit_pairs):
-        logger.info(f"================ Test {i:2} ================")
-        logger.verbose = False
+        logger.info(f"================ Test {i:2} ================", v=True)
+
         try:
             test_result = test_run(test_case[0]) == test_case[1]
         except:

@@ -126,7 +126,7 @@ class GitHubAPI:
             Issue timeline if found else None.
         """
         response = requests.get(
-            f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/timeline", headers=self._headers
+            f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/timeline?per_page=100", headers=self._headers
         )
         if response.status_code != 200:
             return
