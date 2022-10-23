@@ -20,6 +20,15 @@ class FixCommitFinder:
         "default",
     ]
 
+    _res = {
+        "release_notes": {
+            "change_log_1": re.compile(r"#(\d+)\s*`(\w+)`\s*(.*)"),
+        },
+        "default": {
+            "keyword": re.compile(r"[Ff]ix|[Bb]ug"),
+        },
+    }
+
     def __init__(self, cve: CVE, repo: Git):
         self.issue = [ref for ref in cve.references if ref.type_ == ReferenceType.issue]
         self.pull = [ref for ref in cve.references if ref.type_ == ReferenceType.pull]
@@ -50,7 +59,36 @@ class FixCommitFinder:
         return "Not Implemented"
 
     def release_notes_scan(self):
-        return "Not Implemented"
+        def select_commit(commits):
+            if not commits:
+                return
+            commits = commits[::-1]
+            candidate = None
+            for commit in commits:
+                if "[qa]" in commit["commit"]["message"]:  # CVE-2018-17144
+                    continue
+
+                if not candidate:
+                    candidate = commit["sha"]
+
+                if self._res["default"]["keyword"].search(commit["commit"]["message"]):
+                    return commit["sha"]
+
+            return candidate or commits[0]["sha"]
+
+        for match in self._res["release_notes"]["change_log_1"].finditer(self.release_notes.body):
+            pull_request = self.repo.api.get_pull(self.repo.owner, self.repo.repo, int(match.group(1)))
+            pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, int(match.group(1)))
+            if (
+                self.cve.id_ in match.group(0)
+                or self.cve.id_ in pull_request["body"]
+                or self.cve.id_ in pull_request["title"]
+            ):
+                return select_commit(pull_commits)
+
+            timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, int(match.group(1)))
+            if self.cve.id_ in json.dumps(timeline):
+                return select_commit(pull_commits)
 
     def _is_get_pull_reference(self):
         issue_timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, self.issue.json["number"])

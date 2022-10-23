@@ -1,13 +1,14 @@
 # github.py
 
-import requests
-from typing import Optional, Dict
+from typing import Dict, Optional
 
+import requests
 from settings import GITHUB_API_ACCESS_TOKEN  # noqa
 
 
 class GitHubAPI:
-    """GitHub API client.
+    """
+    GitHub API client.
 
     https://docs.github.com/en/rest
 
@@ -16,6 +17,8 @@ class GitHubAPI:
         * get_commits_on_pull
         * get_affected_files_by_pull
         * get_issue
+        * get_issue_timeline
+        * get_file
     """
 
     base_url = "https://api.github.com"
@@ -25,7 +28,8 @@ class GitHubAPI:
     }
 
     def get_pull(self, owner: str, repo: str, pull_number: int):
-        """Get specific pull in project on GitHub.
+        """
+        Get specific pull in project on GitHub.
 
         https://docs.github.com/en/rest/pulls/pulls#get-a-pull-request
 
@@ -44,7 +48,8 @@ class GitHubAPI:
         return response.json()
 
     def get_commits_on_pull(self, owner: str, repo: str, pull_number: int):
-        """Get commits on a specific PR in project on GitHub.
+        """
+        Get commits on a specific PR in project on GitHub.
 
         https://docs.github.com/en/rest/pulls/pulls#list-commits-on-a-pull-request
 
@@ -65,7 +70,8 @@ class GitHubAPI:
         return response.json()
 
     def get_affected_files_by_pull(self, owner: str, repo: str, pull_number: int):
-        """Get affected files in a specific PR in project on GitHub.
+        """
+        Get affected files in a specific PR in project on GitHub.
 
         https://docs.github.com/en/rest/pulls/pulls#list-pull-requests-files
 
@@ -86,7 +92,8 @@ class GitHubAPI:
         return response.json()
 
     def get_issue(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
-        """Get specific issue in project on GitHub.
+        """
+        Get specific issue in project on GitHub.
 
         https://docs.github.com/en/rest/issues/issues#get-an-issue
 
@@ -105,7 +112,8 @@ class GitHubAPI:
         return response.json()
 
     def get_issue_timeline(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
-        """Get specific issue comments in project on GitHub.
+        """
+        Get issue timeline in project on GitHub.
 
         https://docs.github.com/en/rest/issues/timeline#list-timeline-events-for-an-issue
 
@@ -115,11 +123,31 @@ class GitHubAPI:
             issue_number (int): ID of wanted issue
 
         Returns:
-            Issue comments if found else None.
+            Issue timeline if found else None.
         """
         response = requests.get(
             f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/timeline", headers=self._headers
         )
+        if response.status_code != 200:
+            return
+
+        return response.json()
+
+    def get_file(self, owner: str, repo: str, path: str) -> Optional[Dict]:
+        """
+        Get file from GitHub repository.
+
+        https://docs.github.com/en/rest/repos/contents#get-repository-content
+
+        Args:
+            owner (str): Owner of the repository
+            repo (str): Name of the repository
+            path (str): path to file
+
+        Returns:
+            Encoded file data
+        """
+        response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/contents/{path}", headers=self._headers)
         if response.status_code != 200:
             return
 
