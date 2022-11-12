@@ -27,7 +27,7 @@ def run(cve: str):
     load_references(repository, cve.references)
     logger.info("Load references done.")
 
-    fix_commit = get_fixing_commits(repository, cve)
+    fix_commit = get_fixing_commits(repository, cve)  # List
     print(fix_commit)
 
 

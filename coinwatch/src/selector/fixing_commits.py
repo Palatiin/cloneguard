@@ -1,4 +1,38 @@
 # fixing_commits.py
+"""
+List of possible improvements.
+
+Ideas:
+    * implement generic approaches for issues and pulls
+        * class Issue
+            * check for cve reference, keywords, on pass -> search for reference to PR
+            * reference to pull -> transform to Pull obj
+        * class Pull
+            * attr initialization origin - issue#, if issue ref -> select fix commit
+            * without issue ref - title, body scan for cve reference, keywords
+                * if none, search for Issue references
+                * search for CVE ref / keywords in Issue, on match -> select fix commit
+
+        * class ReleaseNotes
+            * source of pull# / commit-sha -> PRIMARY
+                * check desc for cve ref / keywords -> select commit# if mentioned
+                * Pull object without initialization origin, -> select fix commit or continue to next in change log
+            * source of tag range <v -1, release note ver> -> SECONDARY
+
+    * how to differ issue# from pull#
+        * every pull# can be found at /issue & /pull endpoint
+        * issue# can be found only at /issue endpoint
+        ==> if # doesn't have /pull ep data -> Issue
+
+    * modify keyword extraction params
+        * currently extracting key phrases
+        * mark every noun as keyword ??
+
+    * extract versions from release notes - DONE
+    * extract versions from cve description
+
+    * return list of bug fixing commits - DONE
+"""
 
 import json
 import re
@@ -11,7 +45,7 @@ from settings import logger  # noqa
 
 from ..schemas import *
 
-CANDIDATES_LIMIT = 10000
+# CANDIDATES_LIMIT = 100
 
 
 class FixCommitFinder:
@@ -50,37 +84,49 @@ class FixCommitFinder:
         )
         self.cve_keywords = list(filter(lambda x: "bitcoin" not in x[0], self.cve_keywords))
 
-    def get_fix_commit(self) -> str:
-        fix_commit = None
+    def get_fix_commit(self) -> List[str]:
+        fix_commits = []
+
+        # ISSUE SCAN
         if self.issue:
             self.issue = self.issue[0]
-            fix_commit = self.issue_scan()
-        elif self.pull:
-            self.pull = self.pull[0]
-            fix_commit = self.pull_scan()
-        elif self.release_notes:
-            self.release_notes = self.release_notes[0]
-            fix_commit = self.release_notes_scan()
-        if not fix_commit:
-            fix_commit = self.default_scan()
-        return fix_commit
+            if fix_commit := self.issue_scan():
+                return [fix_commit]
 
-    def issue_scan(self):
+        # PULL SCAN
+        if self.pull:
+            self.pull = self.pull[0]
+            if fix_commit := self.pull_scan():
+                return fix_commit if isinstance(fix_commit, list) else [fix_commit]
+
+        # RELEASE NOTES SCAN
+        if self.release_notes:
+            self.release_notes = self.release_notes[0]
+            if fix_commits := self.release_notes_scan():
+                return fix_commits if isinstance(fix_commits, list) else [fix_commits]
+
+        # DEFAULT SCAN
+        fix_commits.extend(self.default_scan())
+
+        return fix_commits
+
+    def issue_scan(self) -> str:
         for pulls in self._is_get_pull_reference():
             for pull in pulls:
                 pull_request = self.repo.api.get_pull(self.repo.owner, self.repo.repo, int(pull))
-                if pull_request["merged"]:
-                    pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, int(pull))
-                    return self._select_commit(pull_commits)
+                if not pull_request["merged"]:
+                    continue
+                pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, int(pull))
+                return self._select_commit(pull_commits)
 
-    def pull_scan(self):
+    def pull_scan(self) -> str:
         pull_request = self.pull.json
         if pull_request["merged"]:
             pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, pull_request["number"])
             return self._select_commit(pull_commits)
         # TODO: if not merged
 
-    def release_notes_scan(self):
+    def release_notes_scan(self) -> List[str] | str:
         change_log = []
 
         for match in self._res["release_notes"]["change_log_1"].finditer(self.release_notes.body):
@@ -95,18 +141,28 @@ class FixCommitFinder:
 
             timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, int(match.group(1)))
             if self.cve.id_ in json.dumps(timeline):
-                return self._select_commit(pull_commits)
+                return self._select_commit(pull_commits)  # return all commits?
 
-            _change_log = list(match.groups())
-            search_text = f"{_change_log[2]} {pull_request['title']} {pull_request['body']} "
+            change_log_item = list(match.groups())
+            search_text = f"{change_log_item[2]} {pull_request['title']} {pull_request['body']} "
             search_text += " ".join(commit["commit"]["message"] for commit in pull_commits)
-            _change_log.extend([self._rn_change_log_eval(search_text), pull_commits])
-            change_log.append(_change_log)
+            # add information value to each commit
+            change_log_item.extend([self._rn_change_log_eval(search_text), pull_commits])
+            # append commits from PR in change log
+            change_log.append(change_log_item)
 
+        # sort by information value
         change_log = sorted(change_log, key=lambda x: x[3], reverse=True)
-        return self._select_commit(change_log[0][4])
+        _change_log = list(filter(lambda x: x[3] > 0, change_log))
+        change_log = _change_log or change_log
 
-    def default_scan(self):
+        commits = []
+        for log in change_log:
+            commits.extend(log[4])
+
+        return commits  # self._select_commit(change_log[0][4])
+
+    def default_scan(self) -> List[str]:
         _after = self.cve.published - timedelta(days=10)
         _after = _after.strftime("%Y-%m-%d")
         _before = self.cve.published + timedelta(days=2)
@@ -120,12 +176,15 @@ class FixCommitFinder:
             if self._res["default"]["keyword"].search(commit):
                 weight += 0.1
             weight += self._rn_change_log_eval(commit)
-            if weight:
-                candidate_commits["count"] += 1
-                candidate_commits["commits"].append((_hash, weight, commit))
+            if not weight:
+                continue
+
+            candidate_commits["count"] += 1
+            candidate_commits["commits"].append((_hash, weight, commit))
 
         commits = sorted(candidate_commits["commits"], key=lambda x: x[1], reverse=True)
-        return commits[0][0]
+        # TODO: if 'Merge' in commit, pull scan?
+        return commits  # commits[0][0]
 
     def _is_get_pull_reference(self):
         issue_timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, self.issue.json["number"])
@@ -191,27 +250,6 @@ def get_tag_range(cve: CVE) -> str:
         return f"{prev_tag}...{fix_tag}"
 
 
-def commit_selector(repo: Git, cve: CVE, commits, selected_weight=0):
-    candidates = []
-    for _hash, commit, weight in commits:
-        if weight < selected_weight:
-            continue
-        if not re.search(r"[Mm]erge|[Cc]herry|[Nn]oting", commit):
-            if match := re.findall(r"CVE-\d+-\d+", commit):
-                if cve.id_ not in match:
-                    continue
-            candidates.append((_hash, commit, weight))
-        elif match := re.search(r"[Mm]erge\s*(?:\w+/\w+|pull request)\s*#(\d+)", commit):
-            pull_request = repo.api.get_pull(repo.owner, repo.repo, int(match.group(1)))
-            if cve.id_ in json.dumps(pull_request):
-                logger.info("selector: fixing_commits: commit_selector: Found CVE in pull request data.")
-                return _hash, commit, weight
-            if match := re.search(r"issue\s*#(\d+)", pull_request["body"]):
-                issue = repo.api.get_issue(repo.owner, repo.repo, int(match.group(1)))
-
-    return commits[0]
-
-
-def get_fixing_commits(repo: Git, cve: CVE) -> str:
+def get_fixing_commits(repo: Git, cve: CVE) -> List[str]:
     finder = FixCommitFinder(cve, repo)
     return finder.get_fix_commit()
