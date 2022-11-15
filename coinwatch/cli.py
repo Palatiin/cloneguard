@@ -1,11 +1,12 @@
 # cli.py
 
 import click
-from clients import CVEClient, Git
-from settings import logger
-from src.cve_reader import load_references
-from src.schemas import CVE
-from src.selector.fixing_commits import get_fixing_commits
+
+from coinwatch.clients import CVEClient, Git
+from coinwatch.settings import logger
+from coinwatch.src.cve_reader import load_references
+from coinwatch.src.fixing_commits import FixCommitFinder
+from coinwatch.src.schemas import CVE
 
 
 @click.group()
@@ -27,8 +28,9 @@ def run(cve: str):
     load_references(repository, cve.references)
     logger.info("Load references done.")
 
-    fix_commit = get_fixing_commits(repository, cve)  # List
-    print(fix_commit)
+    finder = FixCommitFinder(cve, repository)
+    fix_commits = finder.get_fix_commit()
+    print(fix_commits)
 
 
 @cli.command()
@@ -39,7 +41,8 @@ def test():
         repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
         load_references(repository, cve.references)
 
-        return get_fixing_commits(repository, cve)
+        finder = FixCommitFinder(cve, repository)
+        return finder.get_fix_commit()
 
     from tests.test import test_cve_fix_commit_pairs
 
@@ -49,14 +52,16 @@ def test():
         logger.info(f"================ Test {i:2} ================", v=True)
 
         try:
-            test_result = test_run(test_case[0]) == test_case[1]
-        except:
-            test_result = False
+            test_result = test_run(test_case[0])
+            test_eval = test_result == test_case[1]
+        except Exception as e:
+            test_result = str(e)
+            test_eval = False
 
-        if test_result:
+        if test_eval:
             logger.info("Passed.", v=True)
         else:
-            logger.error("Failed.", v=True)
+            logger.error(f"Failed. {test_result}", v=True)
 
 
 if __name__ == "__main__":

@@ -2,14 +2,11 @@
 
 import base64
 import re
-from typing import Dict, List, NoReturn
+from typing import List, NoReturn
 
-import requests
-from bs4 import BeautifulSoup
-from clients import Git  # noqa
-from settings import USER_AGENT, logger  # noqa
-
-from .schemas import *
+from coinwatch.clients import Git
+from coinwatch.settings import USER_AGENT, logger
+from coinwatch.src.schemas import *
 
 __all__ = ["load_references"]
 
