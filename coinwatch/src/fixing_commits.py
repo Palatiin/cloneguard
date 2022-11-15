@@ -39,11 +39,11 @@ import re
 from datetime import timedelta
 from typing import List, Tuple
 
-from clients import Git  # noqa
 from keybert import KeyBERT
-from settings import logger  # noqa
 
-from ..schemas import *
+from coinwatch.clients import Git
+from coinwatch.settings import logger
+from coinwatch.src.schemas import *
 
 # CANDIDATES_LIMIT = 100
 
@@ -169,7 +169,7 @@ class FixCommitFinder:
         _before = _before.strftime("%Y-%m-%d")
         candidate_commits = {"count": 0, "commits": []}
 
-        for _hash, commit in self.repo.logs(after=_after, before=_before, tag_range=get_tag_range(self.cve)):
+        for _hash, commit in self.repo.rev_list(after=_after, before=_before, tag_range=get_tag_range(self.cve)):
             if self.cve.id_ in commit:
                 return _hash
             weight = 0.0
@@ -248,8 +248,3 @@ def get_tag_range(cve: CVE) -> str:
         prev_tag = f"v{fix_tag.group(1)}.{fix_tag.group(2)-1}.0"
         fix_tag = f"v{fix_tag.group(1)}.{fix_tag.group(2)}.{int(fix_tag.group(3))}"
         return f"{prev_tag}...{fix_tag}"
-
-
-def get_fixing_commits(repo: Git, cve: CVE) -> List[str]:
-    finder = FixCommitFinder(cve, repo)
-    return finder.get_fix_commit()

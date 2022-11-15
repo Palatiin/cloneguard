@@ -1,8 +1,8 @@
 # settings.py
 
 import os
-from utils import Logger
 
+from coinwatch.utils import Logger
 
 logger = Logger()
 

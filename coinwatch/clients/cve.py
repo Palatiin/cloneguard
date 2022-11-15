@@ -8,8 +8,9 @@ from collections import defaultdict
 from typing import Dict, List, NoReturn, Optional
 
 import requests
-from settings import logger  # noqa
-from src.schemas import *  # noqa
+
+from coinwatch.settings import logger
+from coinwatch.src.schemas import *
 
 
 class CVEClient:
