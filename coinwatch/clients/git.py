@@ -83,12 +83,12 @@ class Git:
 
         return commit
 
-    def diff(self, commit: str, path: Optional[str] = None) -> str:
-        command = ["git", "diff", "-U0", "--raw", commit]
+    def diff(self, *commits: str, path: Optional[str] = None) -> str:
+        command = ["git", "diff", "-U0", "--raw", *commits]
         command += ["--", path] if path else []
         logger.info("git: diff: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        diff = process.stdout.decode("ascii")
+        diff = process.stdout.decode(errors="replace")
 
         return diff
 
@@ -96,6 +96,6 @@ class Git:
         command = ["git", "annotate", commit, "--", path]
         logger.info("git: annotate: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        annotate = process.stdout.decode("ascii").split()
+        annotate = process.stdout.decode(errors="replace").split("\n")
 
         return annotate

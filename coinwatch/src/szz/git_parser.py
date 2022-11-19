@@ -25,8 +25,8 @@ class GitParser:
             "file_1": {
                 "affected_lines": [
                     {
-                        "a": 30, 0,
-                        "b": 31, None,
+                        "a": (30, 0),
+                        "b": (31, None),
                         "diff_lines": ['+print("Hello")', ...],
                     },
                     ...
@@ -50,6 +50,7 @@ class GitParser:
                 reading_diff_lines = False
                 file = match.group(2)
                 struct_diff["affected_files"].append(file)
+                struct_diff[file] = {}
                 struct_diff[file]["affected_lines"] = []
             elif match := cls._res["diff"]["lines"].search(line):
                 match = match.groupdict()

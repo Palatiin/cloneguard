@@ -7,6 +7,7 @@ from coinwatch.settings import logger
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.schemas import CVE
+from coinwatch.src.szz.szz import SZZ
 
 
 @click.group()
@@ -30,7 +31,10 @@ def run(cve: str):
 
     finder = FixCommitFinder(cve, repository)
     fix_commits = finder.get_fix_commit()
-    print(fix_commits)
+
+    szz = SZZ(repository, fix_commits)
+    fix_big_commit_pairs = szz.run()
+    pass
 
 
 @cli.command()
