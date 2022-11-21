@@ -1,6 +1,6 @@
 # szz.py
 
-from typing import Generator, List, Tuple
+from typing import Dict, Generator, List, Tuple
 
 from coinwatch.clients import Git
 from coinwatch.settings import logger
@@ -18,14 +18,15 @@ class SZZ:
     def run(self) -> List[Tuple[str, str]]:
         logger.info("Running SZZ algorithm.")
 
-        fix_bug_commit_pairs: List[Tuple[str, str]] = []
         annotated_files = {}
         for commit in self.commits:
             prev_commit = self.get_first_from_generator(self.repo.rev_list(commit_id=commit + "~1"))[0]
             commit_diff = self.repo.diff(prev_commit, commit)
             commit_diff = GitParser.parse_diff(commit_diff)
             annotated_files.update({commit: self.annotate_files(commit, commit_diff)})
+        logger.info("SZZ annotation done.")
 
+        fix_bug_commit_pairs = self.get_pairs(annotated_files)
         logger.info("SZZ done.")
 
         return fix_bug_commit_pairs
@@ -95,11 +96,6 @@ class SZZ:
 
         return annotated_lines
 
-
-if __name__ == "__main__":
-    repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
-    fixing_commit_ids = ["42656ea2e552b027e174fdceab7348ffcb8245c4"]
-
-    szz = SZZ(repository, fixing_commit_ids)
-    szz.run()
-    pass
+    def get_pairs(self, candidates: Dict[str, Dict]) -> List[Tuple[str, str]]:
+        # TODO
+        ...
