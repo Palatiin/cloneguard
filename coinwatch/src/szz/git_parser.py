@@ -65,7 +65,7 @@ class GitParser:
                     }
                 )
                 reading_diff_lines = True
-            elif reading_diff_lines:
+            elif reading_diff_lines and line:
                 struct_diff[file]["affected_lines"][-1]["diff_lines"].append(line)
 
         return struct_diff
