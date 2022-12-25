@@ -1,0 +1,121 @@
+
+\chapter{Introduction}
+  Cloned vulnerabilities are security weaknesses that are introduced into a software system
+  when code is copied or reused from another system that contains the vulnerability.
+  These vulnerabilities can be difficult to detect and fix, because they are not necessarily introduced
+  intentionally, instead, they are inherited from the source code that was copied or reused. It is common
+  in software engineering to clone similar functional parts already created in~other applications when
+  developing new products or adding features to existing ones.
+
+  For this case, a good example is cryptocurrencies which became very popular in recent years.
+  Namely, Bitcoin, an Open-Source peer-to-peer electronic cash system created by Satoshi Nakamoto
+  \cite{bitcoin} inspired many new projects that joined the cryptocurrency market. Lot~of them were created
+  as derivatives of Bitcoin with the idea to extend or improve its features and cloning helped to speed up
+  the development of new coins by inheriting its base infrastructure.
+
+  Although, neither a project as phenomenal as Bitcoin is always perfect, plenty of vulnerabilities were
+  discovered in its code base which were accordingly documented and are stored and tracked in vulnerability
+  databases. As there are many other coins that share its code, it is possible that they also share
+  the same vulnerabilities. The question inspired this work to develop a monitoring tool with the goal
+  to analyze the threat and help with the detection of the vulnerable code and its occurrence in
+  cloned projects, as the identification is not an easy but rather costly and exhaustive process
+  and after identification yet also patching the issue is desired.
+
+  The prevalence of code reuse and the increasing complexity of software systems make cloned vulnerabilities
+  an important issue to consider in software development and maintenance. This thesis aims to study the
+  characteristics and impacts of cloned vulnerabilities and to identify effective approaches for detecting
+  and mitigating them. The proposed tool in this work considers disclosed vulnerabilities which means
+  that the issue was already patched in the project that was originally affected by it. Thanks to this fact
+  the tool can identify an issue, the affected code in the original project, and candidate projects with
+  the probability of vulnerability inheritance and additionally the tool can propose also a patch for
+  the detected threat.
+
+  An existing tool, with the same goal described above, was implemented in a project named CoinWatch
+  \cite{CoinWatch} with an aim on vulnerabilities in cryptocurrencies. The CoinWatch inspired this work
+  with an idea to bring improvements, extensions, and a graphical user interface for wider and simplified
+  usage of the tool for detecting and mitigating cloned vulnerabilities.
+
+
+\chapter{Vulnerabilities in Software Applications}
+  Software vulnerabilities and exposures are weaknesses or flaws in software products that can be
+  exploitable by an attacker. By exploitation of a vulnerability, an attacker might be able to gain
+  an~unauthorized access or perform malicious actions which can affect either the targeted application
+  or~its users.
+
+  Most of the known vulnerabilities are associated with dealing with input provided by a user
+  of the application. For instance, some frequent types of vulnerabilities belong buffer overflows,
+  cross site scripting, and SQL injections.\,\cite{vulnerabilities} On the other hand, some of weaknesses
+  might be also caused by using insecure libraries or frameworks, but mostly during the development process
+  through coding mistakes, so-called bugs.
+
+  The consequences of vulnerabilities in software applications can be quite serious like a data breaches,
+  theft of sensitive information, or damage to a product infrastructure. For instance, consider
+  vulnerability, in Microsoft Windows implementation of Server Message Block protocol, with an identifier
+  CVE-2017-0144. An exploitation of this flaw, by sending crafted packets, allows remote attackers to run
+  arbitrary code on a target machine. This defect facilitated the spreading of \emph{WannaCry} ransomware
+  through the network in~2017, which affected many organizations, companies, and individuals.
+  % https://nvd.nist.gov/vuln/detail/CVE-2017-0144, https://www.zdnet.com/article/ransomware-an-executive-guide-to-one-of-the-biggest-menaces-on-the-web/
+
+  Ransomware is a type of malicious software, that locks up the victim's data or device and threatens to delete
+  or keep it locked unless a ransom is paid to an attacker. In the case of \emph{WannaCry}, the malware
+  would encrypt files on the victim's device and ask for a ransom of value 300 USD in Bitcoin if paid within
+  the first three days, otherwise, the value would be doubled for the next four days and if not paid at all,
+  the files would be lost forever.
+  % https://www.ibm.com/topics/ransomware, https://www.csoonline.com/article/3227906/wannacry-explained-a-perfect-ransomware-storm.html
+
+  % Figure
+
+  In order to mitigate repeated occurrences and time consuming process of patching, each
+  vulnerability and exposure is documented and stored in a database, so repeated mistakes in implementation
+  can be mitigated or fixed faster. This source provides valuable information for the public,
+  security engineers, and for tools working with weaknesses in software applications to improve
+  cyber security.
+
+  \section{Vulnerability Record Notations}
+    Each record in the database must follow a schema, which holds a number of mandatory and optional fields
+    describing the vulnerability.
+    \subsection*{Common Vulnerabilities and Exposures - CVE}
+      \paragraph{CVE Fields Description}
+    \subsection*{CPE and Other (TODO)}
+
+  \section{Vulnerability Database}
+    Access via web page or API, organizations, maintainers, creating a new report.
+
+\newpage
+
+
+\chapter{Detection Tools and Approaches}
+
+  \section{Web Scraping and Vulnerability Parsing}
+
+  \section{Code Evolution Analysis - SZZ Algorithm}
+
+  \section{Identification of Vulnerable Code}
+
+  \section{Clone Detection}
+    \subsection*{Types of Clones}
+      There are three types of clones we register nowadays. Depending on  how similar they are to their
+      origins, they are divided into groups:
+      \paragraph{Type I. Clones}
+      \paragraph{Type II. Clones}
+      \paragraph{Type III. Clones}
+
+  \section{Existing Tools}
+
+    \subsection*{CoinWatch}
+      Introduction (Purpose, ...) \\
+      Workflow, references
+
+    \subsection*{Other tools}
+
+
+\chapter{Design}
+
+
+\chapter{Implementation}
+
+
+\chapter{Experimentation}
+
+
+\chapter{Conclusion}
