@@ -1,3 +1,4 @@
+
 \chapter{Introduction}
   Vulnerabilities in software can have serious consequences, including reputation damage,
   financial losses, or even loss of life in the case of critical infrastructure systems. Most of them
@@ -12,7 +13,7 @@
   engineering, the approach of cloning similar functional parts already implemented in~other applications
   is usually applied. It makes the development of new products or adding features to existing ones swifter.
 
-  For this case, a good example is cryptocurrencies which became very popular in recent years.
+  For this case, cryptocurrencies are a good example which became very popular in recent years.
   Namely, Bitcoin, an Open-Source peer-to-peer electronic cash system created by Satoshi Nakamoto~\cite{bitcoin}
   inspired many new projects that joined the cryptocurrency market. Lots~of them were created
   as derivatives of Bitcoin with the idea to extend or improve its features. Cloning helped to speed up
@@ -42,10 +43,10 @@
 
   This thesis begins with a basic introduction to the problem and the motivation for why it is relevant
   to deal with. Chapter \ref{chapter:vulnerabilities} explains and takes a closer look at vulnerabilities
-  and the basic terminology connected with them. In Chapter \ref{chapter:detection-tools}, current detection
-  tools and approaches are described and analyzed. Afterwards, Chapter \ref{chapter:design} describes
-  a draft of the tool built for detecting cloned vulnerabilities. The next two chapters
-  \ref{chapter:implementation} and \ref{chapter:experimentation} contain implementation details
+  and the basic terminology connected with them. In Chapter \ref{chapter:clonedVulnerabilities}, clones of source
+  code, current detection tools and approaches are described and analyzed. Afterwards, Chapter \ref{chapter:design}
+  describes a draft of the tool built for detecting cloned vulnerabilities. The next two Chapters
+  \ref{chapter:implementation} and~\ref{chapter:experimentation} contain implementation details
   and an evaluation of the developed product. The final Chapter \ref{chapter:conclusion} concludes this work
   with potential improvements for future work.
 
@@ -60,13 +61,19 @@
   cross site scripting, and SQL injections~\cite{vulnerabilities}. The mistakes causing these issues
   can be introduced during the development process or by using insecure libraries and frameworks.
 
+  This Chapter will present an example of a cyberattack and its consequences that was performed a few years ago
+  to introduce the severity of this topic. Accordingly, also some general ways to improve the security of applications
+  will be presented. This is followed by a~description of identifiers related to evaluating vulnerabilities
+  and public databases storing details about them.
+
+  \section{Real-world Example of Exploitation}
   The consequences of vulnerabilities in software applications can be quite serious like data breaches,
   theft of sensitive information, or damage to a product infrastructure. For instance, consider
   vulnerability, in Microsoft Windows implementation of Server Message Block protocol, with an identifier
   CVE-2017-0144. An exploitation of this flaw, by sending crafted packets, allows remote attackers to run
   arbitrary code on a target machine. This defect facilitated the spreading of worm-like ransomware
   \emph{WannaCry} through the network in~2017, which affected many organizations, companies,
-  and individuals~\cite{WannaCry}.
+  and individuals~\cite{WannaCry}. Figure~\ref{wannacryDistribution} depicts the spread of \emph{WannaCry} ransomware.
   % https://nvd.nist.gov/vuln/detail/CVE-2017-0144
   % https://www.zdnet.com/article/ransomware-an-executive-guide-to-one-of-the-biggest-menaces-on-the-web/
 
@@ -84,12 +91,11 @@
   security engineers, and for tools working with weaknesses in software applications to improve
   cyber security.
 
-  \newpage
-
   \begin{figure}[h]
     \centering
     \includegraphics[width=0.9\textwidth]{obrazky-figures/wannacry_distribution_bc.pdf}
     \caption{WannaCry ransomware distribution}
+    \label{wannacryDistribution}
   \end{figure}
 
   \section{Prevention and Mitigation}
@@ -99,7 +105,7 @@
 
   \subsection*{Input Validation and Sanitization}
     An input of an application or service can have different sources which can be divided based on trustworthiness.
-    For example, internal communication between services is considered to be a trusted source. On the other side,
+    For example, internal communication between services might be considered a trusted source. On the other side,
     Input from a user is considered to be an untrusted source because the data received can be anything.
     This makes it important to validate it properly, so that malformed input will not harm the system or lead
     to unexpected behaviour. An~example of insufficient validation are SQL injections. To improve input
@@ -158,10 +164,10 @@
   More advice on secure coding practices can be found in~\cite{SecureCodingPractices}. Nevertheless, mistakes
   tend to slip into production versions of software. At this stage, other options are to use vulnerability
   scanning tools, write automated tests or perform penetration testing to discover hidden weaknesses, before
-  they are exploited. Scanning tools are a form of static analysis. They work by searching the application's code/binary
-  for vulnerable patterns. Details of such tools are analysed in the next Chapter \ref{chapter:detection-tools}.
-  Automated tests and penetration testing are forms of dynamic analysis. They discover run-time issues
-  in the built and running application or its parts.
+  they are exploited. Scanning tools are a form of static analysis. They work by searching the application's
+  code/binary for vulnerable patterns. Details of such tools are analysed in the next Chapter
+  \ref{chapter:clonedVulnerabilities}. Automated tests and penetration testing are forms of dynamic analysis.
+  They discover run-time issues in the built and running application or its parts.
 
 %  \section{Types of Software Errors}
 %  Vulnerabilities are often caused by a coding mistake during development. This section presents a variety
@@ -174,6 +180,8 @@
 %  \subsection*{SQL Injection}
 
   \section{Identifiers Related to Security Vulnerabilities}
+  This Section introduces identifiers which are used to evaluate and address vulnerabilities and the most popular
+  publicly available databases storing records about disclosed weaknesses.
 
   \subsection*{CPE -- Common Platform Enumeration}
     CPE refers to a standardized method for describing and identifying abstract classes of software
@@ -280,114 +288,139 @@
 \newpage
 
 
-\chapter{Detection Tools and Approaches}
-\label{chapter:detection-tools}
-  Detection tools and approaches analysed in this Chapter are tools designed for the automatic identification of
-  security vulnerabilities in software applications. Common types are static analysis tools,
-  dynamic analysis tools and penetration testing tools. Static analysis tools scan software's source code
-  to identify potential weaknesses, while dynamic analysis tools observe the behaviour of the system during
-  run-time. Penetration testing tools are designed to simulate attacks on the system to identify
-  vulnerabilities, which might be exploited during a cyber attack. Using these tools is crucial for software
-  applications to ensure the security of sensitive data and fluent operation.
+\chapter{Cloned Vulnerabilities}
+\label{chapter:clonedVulnerabilities}
+Cloned vulnerabilities are weaknesses propagated by reusing source code. This can happen by copy-pasting
+insecure code snippets, whole functions or even whole projects. For copying the whole project version control system
+Git offers an easy option called a fork. This allows developers to inherit the infrastructure of an existing project
+and afterwards they can modify or start building on it their own features. Although, the inherited code base might
+contain vulnerabilities.
 
-  In addition to the detection of vulnerable code and in compliance with the scope of the developed tool,
-  this Chapter deals in the beginning with clones of source code, their types and detection. Afterwards,
-  different approaches of static analysis tools for detecting propagated threats in the software will be analysed.
+This chapter will present types of clones which are based on the level of similarity to the origin and methods
+for their detection. Afterwards, existing static analysis tools and their approaches for the detection of cloned
+vulnerabilities in the software will be analysed.
 
-  \section{Clones of Source Code and Detection}
-    Clones of source code originate from copying and reusing code fragments with possible modification
-    is a common approach in software development. Such activity is an efficient way in programming as similar
-    code does not have to be written multiple times from scratch. Depending on how similar the code clones are to
-    their origins, they are divided into four groups~\cite{CodeClonesSurvey}. For an example of each type of clone
-    consider the following code in the programming language C as the original code:
-    \begin{verbatim}
-    if (a > b) {  // comment
-        a = b + 1;
-    } else {
-        a = b + c;
-    }
-    \end{verbatim}
-    \textbf{Type I} clones are identical code fragments with possible white space characters and comment
-    variations.
-    Type I. clone from the example original code could be:
-    \begin{verbatim}
-    if (a > b) {
-        a = b + 1; }  // comment 1
-    else {
-        a = b + c; }  // comment 2
-    \end{verbatim}
-    \textbf{Type II} are Type I clones with additional possible variations in user-defined identifier naming
-    and types. An example could be:
-    \begin{verbatim}
-    if (x > y) {
-        x = y + 1;  // comment
-    }
-    else { x = y + z; }
-    \end{verbatim}
-    \textbf{Type III} clones in addition to Type I and Type II contain changed, added and/or deleted statements.
-    Type III clone could look like this:
-    \begin{verbatim}
-    if (x > y) {
-        x = y + 1;
-    } else {  // comment
-        flag = 1;  // addition
-        x = y + z;
-    }
-    \end{verbatim}
-    \textbf{Type IV} are code fragments with different syntactical structures, but with the same semantics. Unlike
-    the previous types which were textually similar, this type of clone is defined by functional similarity.
-    An example of a Type IV clone might look accordingly:
-    \begin{verbatim}
-    x = x > y ? y + 1 : y + z;
-    \end{verbatim}
+%In addition to the detection of vulnerable code and in compliance with the scope of the developed tool,
+%this Chapter deals in the beginning with clones of source code, their types and detection. Afterwards,
+%different approaches of static analysis tools for detecting propagated threats in the software will be analysed.
 
-    \subsection*{Detection Techniques and Tools}
-    Detection techniques are divided into four classes: textual, lexical, syntactic and semantical.
-    This section will introduce each class and mention detection tools which are based on them.
+\section{Types of Code Clones}
+  Clones of source code originate from copying and reusing code fragments with possible modification
+  is a common approach in software development. Such activity is an efficient way in programming as similar
+  code does not have to be written multiple times from scratch. Depending on how similar the code clones are to
+  their origins, they are divided into four groups~\cite{CodeClonesSurvey}. For an example of each type of clone
+  consider the following code in the programming language C as the original code:
+  \begin{alltt}
+  if (a > b) \{  // comment
+      a = b + 1;
+  \} else \{
+      a = b + c;
+  \}
+  \end{alltt}
+  \textbf{Type I} clones are identical code fragments with possible white space characters and comment
+  variations.
+  Type I. clone from the example original code could be:
+  \begin{alltt}
+  if (a > b) \{
+      a = b + 1; \textcolor{red}{\}  // comment 1}
+  else \{
+      a = b + c; \textcolor{red}{\}  // comment 2}
+  \end{alltt}
+  \textbf{Type II} are Type I clones with additional possible variations in user-defined identifier naming
+  and types. An example could be:
+  \begin{alltt}
+  if (\textcolor{red}{x} > \textcolor{red}{y}) \{
+      \textcolor{red}{x} = \textcolor{red}{y} + 1;  \textcolor{red}{// comment}
+  \}
+  else \{ \textcolor{red}{x} = \textcolor{red}{y} + \textcolor{red}{z}; \textcolor{red}{\}}
+  \end{alltt}
+  \textbf{Type III} clones in addition to Type I and Type II contain changed, added and/or deleted statements.
+  Type III clone could look like this:
+  \begin{alltt}
+  if (x > y) \{
+      x = y + 1;
+  \} else \{  // comment
+      \textcolor{red}{flag = 1;  // addition}
+      x = y + z;
+  \}
+  \end{alltt}
+  \textbf{Type IV} are code fragments with different syntactical structures, but with the same semantics. Unlike
+  the previous types which were textually similar, this type of clone is defined by functional similarity.
+  An example of a Type IV clone might look accordingly:
+  \begin{verbatim}
+  x = x > y ? y + 1 : y + z;
+  \end{verbatim}
 
-      \subsubsection*{Textual Approaches}\label{clone-detection:simian}
-      Text-based approaches compare two code fragments and detect clones based on string comparison of lines.
-      They are language-independent, easy to implement and generate fewer false positive results. Before detection,
-      they tend to use normalization like the removal of white spaces and comments. This approach is able to detect
-      Type I clones without further post processing~\cite{CloneDetectionTechniques, CodeClonesSurvey}. Tools which
-      are based on this approach include Dup~\cite{Dup} and NICAD~\cite{NICAD}.
+\section{Detection Methods}
+  Detection techniques are divided into four classes: textual, lexical, syntactic and semantical.
+  This section will introduce each class and mention detection tools which are based on them.
 
-      \subsubsection*{Lexical Approaches}
-      In lexical or token-based approaches a whole source code of the analysed project(s) is parsed into a sequence
-      of tokens. Then in the next step, the generated sequence of tokens is scanned for duplicate subsequences which
-      represent code clones in the end. CCFinder~\cite{CCFinder} and CPMiner~\cite{CPMiner} are example tools
-      utilizing this approach. They are able to detect clones of various types and have higher precision than
-      textual approaches, but they also have some limitations. These techniques have higher time and space
-      complexity and are dependent on the order of the tokens and lines. When cloned code contains added or deleted
-      tokens, this approach will not detect it as clone~\cite{CloneDetectionTechniques, CodeClonesSurvey}.
+  \subsubsection*{Textual Approaches}\label{clone-detection:simian}
+    Text-based approaches compare two code fragments and detect clones based on string comparison of lines.
+    They are language-independent, easy to implement and generate fewer false positive results. Before detection,
+    they tend to use normalization like the removal of white spaces and comments. This approach is able to detect
+    Type I clones without further post processing~\cite{CloneDetectionTechniques, CodeClonesSurvey}. Tools which
+    are based on this approach include Dup~\cite{Dup} and NICAD~\cite{NICAD}.
 
-      \subsubsection*{Syntactic Approaches}
-      Syntactic approaches contain two kinds of techniques -- tree-based and metric-based.
+  \subsubsection*{Lexical Approaches}
+    In lexical or token-based approaches a whole source code of the analysed project(s) is parsed into a sequence
+    of tokens. Then in the next step, the generated sequence of tokens is scanned for duplicate subsequences which
+    represent code clones in the end. CCFinder~\cite{CCFinder} and CPMiner~\cite{CPMiner} are example tools
+    utilizing this approach. They are able to detect clones of various types and have higher precision than
+    textual approaches, but they also have some limitations. These techniques have higher time and space
+    complexity and are dependent on the order of the tokens and lines. When cloned code contains added or deleted
+    tokens, this approach will not detect it as clone~\cite{CloneDetectionTechniques, CodeClonesSurvey}.
 
-      Tree-based approach parses the source code of the analysed project firstly into tokens which are used
-      to build an abstract syntax tree (AST). Then the clones are detected using tree-matching algorithms rather
-      than matching sequences of tokens in lines as in lexical approaches. In this case, similar sub-trees
-      represent duplicate code. Tools developed by Baxter et al.~\cite{ASTBaxter} and by Wahler et
-      al.~\cite{ASTWahler} implement a tree-based approach.
+  \subsubsection*{Syntactic Approaches}
+    Syntactic approaches contain two kinds of techniques -- tree-based and metric-based.
 
-      The second kind, the metric-based approach uses a number of different metrics gathered from syntactic units
-      like classes, methods, functions or statements in the target source code. The metric vectors are then compared
-      in order to detect clones instead of searching through AST or comparing code directly. Some of the collected
-      metrics in tools implementing this approach can be numbers of loop, conditional and return
-      statements.~\cite{CloneDetectionTechniques, CodeClonesSurvey}
-      Implementations of metric-based approach are for example tools developed by Mayrand et al.~\cite{MBMayrand}
-      or by Abdul-El-Hafiz et al.~\cite{MDAbdul}.
+    Tree-based approach parses the source code of the analysed project firstly into tokens which are used
+    to build an abstract syntax tree (AST). Then the clones are detected using tree-matching algorithms rather
+    than matching sequences of tokens in lines as in lexical approaches. In this case, similar sub-trees
+    represent duplicate code. Tools developed by Baxter et al.~\cite{ASTBaxter} and by Wahler et
+    al.~\cite{ASTWahler} implement a tree-based approach.
 
-      \subsubsection*{Semantic Approaches}
-      \#TODO
+    The second kind, the metric-based approach uses a number of different metrics gathered from syntactic units
+    like classes, methods, functions or statements in the target source code. The metric vectors are then compared
+    in order to detect clones instead of searching through AST or comparing code directly. Some of the collected
+    metrics in tools implementing this approach can be numbers of loop, conditional and return
+    statements.~\cite{CloneDetectionTechniques, CodeClonesSurvey}
+    Implementations of metric-based approach are for example tools developed by Mayrand et al.~\cite{MBMayrand}
+    or by Abdul-El-Hafiz et al.~\cite{MDAbdul}.
 
+  \subsubsection*{Semantic Approaches}
+    This kind of approach is used to detect code fragments with similar semantics but different code structure.
+    There are two approaches connected with this technique -- graph-based and hybrid.
 
-  \section{CoinWatch}
+    The graph-based approach utilizes a Program Dependency Graph (PDG) to represent data and control
+    flow of the analysed source code. The detection is performed by an isomorphic subgraph matching algorithm.
+    For example tool GPLAG~\cite{GPLAG} implements this approach.
+
+    The hybrid detection technique combines multiple approaches which were mentioned
+    before~\cite{CloneDetectionTechniques, CodeClonesSurvey}. An approach developed by Agrawal et
+    al.~\cite{HybridAgrawal} uses this technique.
+
+\section{Detection Tools}
+Detection tools and approaches analysed in this section are tools designed for the automatic identification of
+security vulnerabilities in software applications. Common types are static analysis tools,
+dynamic analysis tools and penetration testing tools. Static analysis tools scan software's source code
+to identify potential weaknesses, while dynamic analysis tools observe the behaviour of the system during
+run-time. Penetration testing tools are designed to simulate attacks on the system to identify
+vulnerabilities, which might be exploited during a cyber attack.
+
+  \subsection*{CoinWatch}
     CoinWatch is a static analysis tool utilizing a clone-based approach for detecting vulnerabilities
     in cryptocurrencies. Cryptocurrencies are an attractive commodity for attackers because they can be
     anonymously sold on exchanges. The fact, that many of them have their source code publicly available,
     makes it possible to develop tools like CoinWatch. It was developed in 2020 and has achieved promising
     results, but unfortunately, it is not available for public use.
+
+    In summary, CoinWatch reported 786 vulnerabilities in 384 cryptocurrencies to the date, when the paper
+    was written and achieved a true positive rate of 89.7\%. To the date, CoinWatch worked only with Type I
+    clones, while Type II and Type III would need a more sophisticated method of detection like analysis of
+    decompiled binaries of projects. In future work, creators want to investigate possibilities for how to
+    detect also Type II and Type III clones alongside automating the process of the manual code
+    annotation~\cite{CoinWatch}.
 
     A study connected with CoinWatch contains an analysis of the propagation of cloned source code between
     cryptocurrencies. The analysis found that at the time 786 cryptocurrencies were directly or indirectly
@@ -428,7 +461,7 @@
       \label{coinwatch-workflow}
     \end{figure}
 
-    \subsection*{CVE Parsing and Linking with Commits}
+    \subsubsection*{CVE Parsing and Linking with Commits}
       In this step, CoinWatch scrapes and parses details of the selected vulnerability. Following data
       are extracted from details about CVE in vulnerability databases:
       \begin{itemize}
@@ -442,7 +475,7 @@
       In case of code-specific weakness, the code evolution analysis links patching and bug-introducing
       commits with the CVE.
 
-  \subsection*{Code Evolution Analysis -- SZZ Algorithm}
+    \subsubsection*{Code Evolution Analysis -- SZZ Algorithm}
     For purpose of code evolution analysis, CoinWatch utilizes the SZZ algorithm. The algorithm was proposed
     by Sliwerski, Zimmermann and Zeller~\cite{SZZalgorithm} as an approach for identifying bug-introducing
     commits. An open implementation of the algorithm is named SZZ Unleashed~\cite{SZZunleashed}. It is written
@@ -465,7 +498,7 @@
     the annotation of commits 3, 4 and 5.
 
     % note: Fix Commit Identification - https://www.st.cs.uni-saarland.de/papers/msr2005/msr2005.pdf
-  \subsection*{Identification of Vulnerable Code and Initial Filtering}
+    \subsubsection*{Identification of Vulnerable Code and Initial Filtering}
     Inputs for this part of the CoinWatch are bug-fixing and their matching bug-introducing commits.
     For initial filtering of potentially vulnerable forks, CoinWatch selects the newest bug-fixing commit
     and the oldest bug-introducing commit to form a time window. Monitored forked projects are then filtered
@@ -477,7 +510,7 @@
     After the manual code annotation, it is transformed into a detection test as input for the clone detection
     tool.
 
-  \subsection*{Clone Detection Process}
+    \subsubsection*{Clone Detection Process}
     Finally, CoinWatch triggers the clone detection tool Simian \ref{clone-detection:simian} with the detection
     test on the list of potentially vulnerable candidates from the previous step. This filters the projects
     that already patched the vulnerability or reimplemented the part of code, which was vulnerable in the
@@ -490,15 +523,7 @@
       \label{szz-line-map}
   \end{figure}
 
-  \subsection*{Conclusion}
-    In summary, CoinWatch reported 786 vulnerabilities in 384 cryptocurrencies to the date, when the paper
-    was written and achieved a true positive rate of 89.7\%. To the date, CoinWatch worked only with Type I
-    clones, while Type II and Type III would need a more sophisticated method of detection like analysis of
-    decompiled binaries of projects. In future work, creators want to investigate possibilities for how to
-    detect also Type II and Type III clones alongside automating the process of the manual code
-    annotation~\cite{CoinWatch}.
-
-  \section{BlockScope}
+  \subsection*{BlackScope}
     BlockScope is a novel tool for detecting vulnerabilities propagated by cloning blockchain projects like
     Bitcoin and Ethereum. It is a language-agnostic tool capable of detecting multiple vulnerabilities from
     existing security patches. BlockScope utilizes similarity-based code match and designs
@@ -529,6 +554,8 @@
     unknown vulnerabilities propagated via code cloning in 13 out of 16 analysed projects forked from Bitcoin
     and Ethereum. Unfortunately, just like CoinWatch it is not available for public use and is
     close sourced~\cite{BlockScope}.
+
+
 % https://www.researchgate.net/publication/335152710_Detecting_Security_Vulnerabilities_using_Clone_Detection_and_Community_Knowledge
 
 \chapter{Design}
