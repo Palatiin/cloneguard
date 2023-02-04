@@ -32,6 +32,8 @@ Ideas:
     * extract versions from cve description
 
     * return list of bug fixing commits - DONE
+
+    CVE.json["configurations"] - extract affected project versions
 """
 
 import json

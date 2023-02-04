@@ -2,7 +2,7 @@
 
 import re
 import subprocess
-from typing import Generator, NoReturn, Optional
+from typing import Generator, List, NoReturn, Optional
 
 from coinwatch.clients import GitHubAPI
 from coinwatch.settings import logger
@@ -82,3 +82,20 @@ class Git:
         commit = process.stdout.decode(errors="replace")
 
         return commit
+
+    def diff(self, *commits: str, context_lines: int = 0, path: Optional[str] = None) -> str:
+        command = ["git", "diff", f"-U{context_lines}", "--raw", *commits]
+        command += ["--", path] if path else []
+        logger.info("git: diff: Command: " + " ".join(command))
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        diff = process.stdout.decode(errors="replace")
+
+        return diff
+
+    def annotate(self, commit: str, path: str) -> List[str]:
+        command = ["git", "annotate", commit, "--", path]
+        logger.info("git: annotate: Command: " + " ".join(command))
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        annotate = process.stdout.decode(errors="replace").split("\n")
+
+        return annotate

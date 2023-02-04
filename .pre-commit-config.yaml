@@ -3,7 +3,7 @@ default_language_version:
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v3.3.0
+    rev: v4.4.0
     hooks:
       - id: trailing-whitespace
         exclude: ^.*\.md$
@@ -15,19 +15,19 @@ repos:
       - id: check-merge-conflict
 
   - repo: https://github.com/timothycrosley/isort
-    rev: 5.7.0
+    rev: 5.12.0
     hooks:
       - id: isort
 
   - repo: https://github.com/ambv/black
-    rev: 22.3.0
+    rev: 23.1.0
     hooks:
       - id: black
         language_version: python3.10
         args: [--line-length=120]
 
   - repo: https://github.com/PyCQA/pydocstyle
-    rev: 5.1.1
+    rev: 6.3.0
     hooks:
       - id: pydocstyle
         args: ["--ignore=D100,D101,D102,D103,D104,D105,D106,D107,D203,D212,D213,D406,D407,D413"]
