@@ -83,8 +83,8 @@ class Git:
 
         return commit
 
-    def diff(self, *commits: str, path: Optional[str] = None) -> str:
-        command = ["git", "diff", "-U0", "--raw", *commits]
+    def diff(self, *commits: str, context_lines: int = 0, path: Optional[str] = None) -> str:
+        command = ["git", "diff", f"-U{context_lines}", "--raw", *commits]
         command += ["--", path] if path else []
         logger.info("git: diff: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)

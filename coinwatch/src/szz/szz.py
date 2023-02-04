@@ -1,7 +1,6 @@
 # szz.py
 
 from dataclasses import dataclass
-from datetime import datetime as dt
 from typing import Any, Dict, Generator, List
 
 from coinwatch.clients import Git
@@ -23,7 +22,7 @@ class SZZ:
     # TODO filter comment lines
     RECURSION = 3
 
-    IGNORED_EXTENSIONS = [".txt", ".md", ".pdf"]
+    IGNORED_EXTENSIONS = [".txt", ".md", ".pdf", ".h", ".hpp"]
 
     def __init__(self, repo: Git, commits: List[str]):
         self.repo = repo
@@ -32,7 +31,7 @@ class SZZ:
         self.fix_time = None
         # TODO prepare multiprocessing
 
-    def run(self) -> List[List[str | List[Any]]]:
+    def run(self) -> Dict:
         logger.info("Running SZZ algorithm.")
 
         annotated_files = {}
@@ -43,10 +42,7 @@ class SZZ:
             annotated_files[commit] = self.annotate_files(commit, commit_diff)
         logger.info("SZZ annotation done.")
 
-        fix_bug_commit_pairs = self.get_pairs(annotated_files)
-        logger.info("SZZ done.")
-
-        return fix_bug_commit_pairs
+        return annotated_files
 
     @staticmethod
     def get_first_from_generator(gen: Generator) -> Any:
@@ -70,7 +66,9 @@ class SZZ:
         """
         annotated_files: Dict[str, List[Node]] = {}
         for filename in commit_diff["affected_files"]:
-            if filename.split(".")[-1] in self.IGNORED_EXTENSIONS:
+            if "." + filename.split(".")[-1] in self.IGNORED_EXTENSIONS:
+                continue
+            if "/test" in filename:
                 continue
             file_diff = commit_diff[filename]
             annotated_files[filename] = self.annotate_lines(commit, filename, file_diff)
@@ -241,19 +239,3 @@ class SZZ:
             if not (b_line <= b_line_num < b_line + (b_len or 1)):
                 continue
             return lines["a"][0] + b_line_num - b_line
-
-    def get_pairs(self, candidates: Dict[str, Dict]) -> List[List[str | List[Any]]]:
-        pairs = []
-        for key in candidates:
-            pair = [key, []]
-            for i in range(1, self.RECURSION + 1):  # on 0th index is fix commit
-                pair[1].append(
-                    [
-                        node.commits[i]
-                        for file in candidates[key]
-                        for node in candidates[key][file]
-                        if len(node.commits) > i
-                    ]
-                )
-            pairs.append(pair)
-        return pairs

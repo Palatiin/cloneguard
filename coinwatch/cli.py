@@ -17,13 +17,13 @@ def cli():
 
 @cli.command()
 @click.argument("cve", required=True, type=str)
-def run(cve: str):
-    """Scrape information about CVE."""
+@click.argument("repo", required=False, type=str)
+def run(cve: str, repo: str):
     logger.info("Scrape CVE...")
     cve: CVE = CVEClient().cve_id(cve)
     logger.info("Scrape CVE done.")
 
-    repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+    repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
 
     logger.info("Load references...")
     load_references(repository, cve.references)
@@ -31,6 +31,7 @@ def run(cve: str):
 
     finder = FixCommitFinder(cve, repository)
     fix_commits = finder.get_fix_commit()
+    logger.info(f"{fix_commits=}")
 
     szz = SZZ(repository, fix_commits)
     fix_big_commit_pairs = szz.run()
