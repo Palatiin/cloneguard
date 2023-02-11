@@ -4,6 +4,7 @@ import click
 
 from coinwatch.clients import CVEClient, Git
 from coinwatch.settings import logger
+from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.schemas import CVE
@@ -49,9 +50,11 @@ def test():
         finder = FixCommitFinder(cve, repository)
         return finder.get_fix_commit()
 
+    logger.verbose = False
+
     from tests.test import test_cve_fix_commit_pairs
 
-    logger.verbose = False
+    logger.info("Test CVE scraper + Commit finder", v=True)
 
     for i, test_case in enumerate(test_cve_fix_commit_pairs):
         logger.info(f"================ Test {i:2} ================", v=True)
@@ -60,6 +63,26 @@ def test():
             test_result = test_run(test_case[0])
             test_eval = test_result == test_case[1]
         except Exception as e:
+            test_result = str(e)
+            test_eval = False
+
+        if test_eval:
+            logger.info("Passed.", v=True)
+        else:
+            logger.error(f"Failed. {test_result}", v=True)
+
+    logger.info("Test Context Extractor", v=True)
+    from tests.test_context_extraction import test_list_context_extraction
+
+    for i, test_case in enumerate(test_list_context_extraction):
+        logger.info(f"================ Test {i:2} ================", v=True)
+
+        try:
+            ext = Extractor(5)
+            test_result = ext.extract(test_case[0])
+            test_eval = test_result[0].keywords == test_case[1][0]
+            test_eval &= test_result[1].keywords == test_case[1][1]
+        except Exceptions as e:
             test_result = str(e)
             test_eval = False
 

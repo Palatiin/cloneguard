@@ -50,3 +50,20 @@ assert(hashPrevBlock == view.GetBestBlock());
 if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
 if (!fJustCheck)
 """
+
+test_list_context_extraction = [
+    (
+        test_patch,
+        (
+            ["annotated", "blame_lines_of_code", "a_len", "b_line", "a_line"],
+            ["prev_commit_", "self._get_line_mapping", "annotated.append", "a_num", "else"],
+        ),
+    ),
+    (
+        test_patch2,
+        (
+            ["AssertLockHeld", "assert", "phashBlock", "block.GetHash", "GetTimeMicros"],
+            ["CheckBlock", "hashPrevBlock", "view.GetBestBlock", "chainparams.GetConsensus", "!fJustCheck"],
+        ),
+    ),
+]
