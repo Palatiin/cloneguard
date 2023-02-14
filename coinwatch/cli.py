@@ -80,8 +80,10 @@ def test():
         try:
             ext = Extractor(5)
             test_result = ext.extract(test_case[0])
-            test_eval = test_result[0].keywords == test_case[1][0]
-            test_eval &= test_result[1].keywords == test_case[1][1]
+            upper_ctx = [pair[1] for pair in test_result[0].sentence_keyword_pairs]
+            lower_ctx = [pair[1] for pair in test_result[1].sentence_keyword_pairs]
+            test_eval = upper_ctx == test_case[1][0]
+            test_eval &= lower_ctx == test_case[1][1]
         except Exceptions as e:
             test_result = str(e)
             test_eval = False

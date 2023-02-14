@@ -10,7 +10,7 @@ class Context:
     """Data class representing context and its keywords."""
 
     is_eof: bool = False
-    keywords: List[str] = field(default_factory=list)
+    sentence_keyword_pairs: List[Tuple[str, str]] = field(default_factory=list)
 
 
 class Extractor:
@@ -61,16 +61,16 @@ class Extractor:
             tokens = self._tokenize(line)
             # select the longest token as keyword
             keyword = max(tokens, key=len)
-            context[is_lower].keywords.append(keyword)
+            context[is_lower].sentence_keyword_pairs.append((line, keyword))
 
         # check number of context keywords
-        if (ctx_lines := len(context[0].keywords)) > self.context_lines:
-            context[0].keywords = context[0].keywords[-self.context_lines :]
+        if (ctx_lines := len(context[0].sentence_keyword_pairs)) > self.context_lines:
+            context[0].sentence_keyword_pairs = context[0].sentence_keyword_pairs[-self.context_lines :]
         elif ctx_lines < self.context_lines:
             context[0].is_eof = True
 
-        if (ctx_lines := len(context[1].keywords)) > self.context_lines:
-            context[1].keywords = context[1].keywords[: self.context_lines]
+        if (ctx_lines := len(context[1].sentence_keyword_pairs)) > self.context_lines:
+            context[1].sentence_keyword_pairs = context[1].sentence_keyword_pairs[: self.context_lines]
         elif ctx_lines < self.context_lines:
             context[1].is_eof = True
 
