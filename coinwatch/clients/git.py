@@ -99,3 +99,9 @@ class Git:
         annotate = process.stdout.decode(errors="replace").split("\n")
 
         return annotate
+
+    def grep(self, pattern):
+        command = ["git", "grep", pattern]
+        logger.info("git: grep: Command: " + " ".join(command))
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        return process.stdout.decode(errors="replace")
