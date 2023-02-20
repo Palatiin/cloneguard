@@ -79,29 +79,29 @@ class Git:
         command = ["git", "show", "--quiet" if quiet else "", "--date=iso", _hash]
         logger.info("git: show: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        commit = process.stdout.decode(errors="replace")
-
-        return commit
+        return process.stdout.decode(errors="replace")
 
     def diff(self, *commits: str, context_lines: int = 0, path: Optional[str] = None) -> str:
         command = ["git", "diff", f"-U{context_lines}", "--raw", *commits]
         command += ["--", path] if path else []
         logger.info("git: diff: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        diff = process.stdout.decode(errors="replace")
-
-        return diff
+        return process.stdout.decode(errors="replace")
 
     def annotate(self, commit: str, path: str) -> List[str]:
         command = ["git", "annotate", commit, "--", path]
         logger.info("git: annotate: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        annotate = process.stdout.decode(errors="replace").split("\n")
+        return process.stdout.decode(errors="replace").split("\n")
 
-        return annotate
-
-    def grep(self, pattern):
-        command = ["git", "grep", pattern]
+    def grep(self, pattern) -> List[str]:
+        command = ["git", "grep", "-n", pattern]
         logger.info("git: grep: Command: " + " ".join(command))
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        return process.stdout.decode(errors="replace")
+        return process.stdout.decode(errors="replace").split("\n")
+
+    def get_lines(self, path: str, start: int, end: int) -> List[str]:
+        ln_range = end - start
+        command = ["head", f"-{end}", path, "|", "tail", f"-{ln_range}"]
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        return process.stdout.decode(errors="replace").split("\n")
