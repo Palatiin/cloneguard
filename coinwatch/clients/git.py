@@ -100,8 +100,7 @@ class Git:
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         return process.stdout.decode(errors="replace").split("\n")
 
-    def get_lines(self, path: str, start: int, end: int) -> List[str]:
-        ln_range = end - start
-        command = ["head", f"-{end}", path, "|", "tail", f"-{ln_range}"]
-        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        return process.stdout.decode(errors="replace").split("\n")
+    def open_file(self, path: str) -> List[str]:
+        with open(f"{self.path_to_repo}/{path}", "r", encoding="UTF-8") as file:
+            lines = file.readlines()
+        return lines

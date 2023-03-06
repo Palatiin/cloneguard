@@ -1,5 +1,7 @@
 # cli.py
 
+from typing import Tuple
+
 import click
 
 from coinwatch.clients import CVEClient, Git
@@ -8,6 +10,7 @@ from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.schemas import CVE
+from coinwatch.src.searcher import Searcher
 from coinwatch.src.szz.szz import SZZ
 
 
@@ -37,6 +40,19 @@ def run(cve: str, repo: str):
     szz = SZZ(repository, fix_commits)
     fix_big_commit_pairs = szz.run()
     pass
+
+
+@cli.command()
+def test_searcher():
+    from tests.test_context_extraction import test_patch2
+
+    repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+
+    extractor = Extractor(5)
+    patch_context: Tuple[Context, Context] = extractor.extract(test_patch2)
+
+    searcher = Searcher(patch_context, repository)
+    sr = searcher.search()
 
 
 @cli.command()
@@ -84,7 +100,7 @@ def test():
             lower_ctx = [pair[1] for pair in test_result[1].sentence_keyword_pairs]
             test_eval = upper_ctx == test_case[1][0]
             test_eval &= lower_ctx == test_case[1][1]
-        except Exceptions as e:
+        except Exception as e:
             test_result = str(e)
             test_eval = False
 

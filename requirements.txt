@@ -31,7 +31,9 @@ joblib==1.2.0
 keybert==0.6.0
     # via -r requirements.in
 nltk==3.7
-    # via sentence-transformers
+    # via
+    #   -r requirements.in
+    #   sentence-transformers
 numpy==1.23.4
     # via
     #   keybert
