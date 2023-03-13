@@ -6,9 +6,11 @@ import click
 
 from coinwatch.clients import CVEClient, Git
 from coinwatch.settings import logger
+from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.fixing_commits import FixCommitFinder
+from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.schemas import CVE
 from coinwatch.src.searcher import Searcher
 from coinwatch.src.szz.szz import SZZ
@@ -53,6 +55,10 @@ def test_searcher():
 
     searcher = Searcher(patch_context, repository)
     sr = searcher.search()
+
+    patch_code = PatchCode(test_patch2.split("\n")).fetch()
+    candidate_statuses = [Comparator.determine_patch_application(patch_code, candidate) for candidate in sr]
+    pass
 
 
 @cli.command()

@@ -187,7 +187,16 @@ class Searcher:
             file = self.repo.open_file(candidate.key_statements[0].filename)
             start_line = candidate.upper_code[candidate.boundary[0][1][1]][0] + 1
             end_line = candidate.lower_code[candidate.boundary[1][0][1]][0]
-            candidate_code_list.append(file[start_line:end_line])
+            candidate_code: List[str] = []
+            for line in file[start_line:end_line]:
+                line = line.strip()
+                if not line:
+                    continue
+                if self._in_comment(candidate.key_statements[0].file_extension, line, ""):
+                    continue
+                candidate_code.append(line)
+            if candidate_code:
+                candidate_code_list.append(candidate_code)
 
         return candidate_code_list
 
