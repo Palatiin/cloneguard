@@ -3,6 +3,7 @@
 from typing import Tuple
 
 import click
+import structlog
 
 from coinwatch.clients import CVEClient, Git
 from coinwatch.settings import logger
@@ -14,6 +15,8 @@ from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.schemas import CVE
 from coinwatch.src.searcher import Searcher
 from coinwatch.src.szz.szz import SZZ
+
+logger = structlog.get_logger(__name__)
 
 
 @click.group()

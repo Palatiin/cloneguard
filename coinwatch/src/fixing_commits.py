@@ -41,13 +41,15 @@ import re
 from datetime import timedelta
 from typing import List, Tuple
 
-from keybert import KeyBERT
+import nltk
 
 from coinwatch.clients import Git
-from coinwatch.settings import logger
 from coinwatch.src.schemas import *
 
 # CANDIDATES_LIMIT = 100
+
+nltk.download("punkt")
+nltk.download("averaged_perceptron_tagger")
 
 
 class FixCommitFinder:
@@ -69,7 +71,7 @@ class FixCommitFinder:
     }
 
     _keyword_count = 10
-    _keyphrase_ngram_range = (1, 3)
+    _whitelisted_word_tags = ["NN", "NNP", "NNS", "JJ", "VB", "VBN", "VBG"]
 
     def __init__(self, cve: CVE, repo: Git):
         self.issue = [ref for ref in cve.references if ref.type_ == ReferenceType.issue]
@@ -77,14 +79,12 @@ class FixCommitFinder:
         self.release_notes = [ref for ref in cve.references if ref.type_ == ReferenceType.release_notes]
         self.cve = cve
         self.repo = repo
-        self.kw_model = KeyBERT(model="all-mpnet-base-v2")
-        self.cve_keywords: List[Tuple[str, float]] = self.kw_model.extract_keywords(
-            cve.descriptions["en"],
-            keyphrase_ngram_range=self._keyphrase_ngram_range,
-            highlight=False,
-            top_n=self._keyword_count,
+        self.cve_keywords: List[str] = nltk.word_tokenize(cve.descriptions["en"])
+        self.cve_keywords: List[Tuple] = nltk.pos_tag(self.cve_keywords)
+        self.cve_keywords = list(
+            filter(lambda x: x[1] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower(), self.cve_keywords)
         )
-        self.cve_keywords = list(filter(lambda x: "bitcoin" not in x[0], self.cve_keywords))
+        self.cve_keywords: List[str] = [kw[0] for kw in self.cve_keywords]
 
     def get_fix_commit(self) -> List[str]:
         fix_commits = []
