@@ -8,12 +8,14 @@ from collections import defaultdict
 from typing import Dict, List, NoReturn, Optional
 
 import requests
+import structlog
 
-from coinwatch.settings import logger
 from coinwatch.src.schemas import *
 
+logger = structlog.get_logger(__name__)
 
-class CVEClient:
+
+class CVEClient(object):
     """
     Client for CVE API.
 

@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  app:
+    image: app
+    command: echo "Hello"
+    volumes:
+      - .:/app
+    build:
+      context: .
+    env_file:
+      - ./coinwatch/.env
