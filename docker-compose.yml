@@ -29,3 +29,5 @@ services:
       PGHOST: db
     env_file:
       - ./coinwatch/.env
+    depends_on:
+      - db

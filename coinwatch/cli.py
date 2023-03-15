@@ -47,6 +47,15 @@ def run(cve: str, repo: str):
 
 
 @cli.command()
+def db_init():
+    from coinwatch.src.db.session import DBSchemaSetup, db_session
+    from coinwatch.utils.db_init import init
+
+    with DBSchemaSetup():
+        init(db_session)
+
+
+@cli.command()
 def test_searcher():
     from tests.test_context_extraction import test_patch2
 
