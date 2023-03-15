@@ -1,6 +1,20 @@
 version: '3.8'
 
+volumes:
+  coinwatch:
+
 services:
+  db:
+    image: postgres:14
+    volumes:
+      - coinwatch:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: postgres
+
   app:
     image: app
     command: echo "Hello"
@@ -8,5 +22,10 @@ services:
       - .:/app
     build:
       context: .
+    environment:
+      DB_NAME: postgres
+      PG_USER: admin
+      PG_PASS: postgres
+      PGHOST: db
     env_file:
       - ./coinwatch/.env
