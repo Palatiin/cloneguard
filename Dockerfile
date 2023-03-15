@@ -19,3 +19,5 @@ RUN poetry check && \
 	poetry install --no-root
 
 COPY ./coinwatch /app/coinwatch
+
+RUN python3 -m coinwatch.utils.nltk_init

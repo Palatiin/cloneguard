@@ -3,7 +3,7 @@
 from datetime import datetime as dt
 
 import coinwatch.src.db.crud as crud
-from coinwatch.db.schema import *
+from coinwatch.src.db.schema import *
 
 
 def init(db):
