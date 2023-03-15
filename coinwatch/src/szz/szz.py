@@ -3,9 +3,12 @@
 from dataclasses import dataclass
 from typing import Any, Dict, Generator, List
 
+import structlog
+
 from coinwatch.clients import Git
-from coinwatch.settings import logger
 from coinwatch.src.szz.git_parser import GitParser
+
+logger = structlog.get_logger(__name__)
 
 
 @dataclass

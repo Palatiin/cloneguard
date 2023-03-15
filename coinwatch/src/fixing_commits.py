@@ -79,7 +79,7 @@ class FixCommitFinder:
         self.release_notes = [ref for ref in cve.references if ref.type_ == ReferenceType.release_notes]
         self.cve = cve
         self.repo = repo
-        self.cve_keywords: List[str] = nltk.word_tokenize(cve.descriptions["en"])
+        self.cve_keywords: List[str] = nltk.word_tokenize(cve.descriptions["en"][0])
         self.cve_keywords: List[Tuple] = nltk.pos_tag(self.cve_keywords)
         self.cve_keywords = list(
             filter(lambda x: x[1] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower(), self.cve_keywords)

@@ -4,8 +4,11 @@ import re
 import subprocess
 from typing import Generator, List, NoReturn, Optional
 
+import structlog
+
 from coinwatch.clients import GitHubAPI
-from coinwatch.settings import logger
+
+logger = structlog.get_logger(__name__)
 
 
 class Git:

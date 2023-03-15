@@ -4,8 +4,10 @@ import base64
 import re
 from typing import List, NoReturn
 
+import structlog
+
 from coinwatch.clients import Git
-from coinwatch.settings import USER_AGENT, logger
+from coinwatch.settings import USER_AGENT
 from coinwatch.src.schemas import *
 
 __all__ = ["load_references"]
@@ -13,6 +15,9 @@ __all__ = ["load_references"]
 _re_issue = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/issues/(\d+)")
 _re_pull = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/pull/(\d+)")
 _re_release_notes = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/blob/(.*?)/doc/release-notes\.md")
+
+
+logger = structlog.get_logger(__name__)
 
 
 def load_references(repo: Git, references: List[Reference]) -> NoReturn:
