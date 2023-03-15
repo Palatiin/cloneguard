@@ -1,6 +1,6 @@
 # schema.py
 
-from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, List, Sequence, String
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Sequence, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 
@@ -19,7 +19,7 @@ class Bug(Base):
 
     id = Column(Integer(), bug_id_sequence, primary_key=True)
     cve_id = Column(String(16), nullable=True, default=None)
-    fix_commit = Column(List[String], nullable=True, default=[])
+    fix_commit = Column(String(), nullable=True, default=[])
     patch = Column(String(), nullable=True, default=None)
     verified = Column(Boolean(), nullable=False, default=False)
 

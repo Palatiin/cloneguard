@@ -6,7 +6,7 @@ from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
 from coinwatch import settings
-from coinwatch.src.db import Base
+from coinwatch.src.db.schema import Base
 
 
 def create_db() -> (Engine, scoped_session, DeclarativeMeta):

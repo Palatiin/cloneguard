@@ -1,13 +1,13 @@
-version: '3.8'
+version: '3.4'
 
 volumes:
-  coinwatch:
+  coinwatch_data:
 
 services:
   db:
     image: postgres:14
     volumes:
-      - coinwatch:/var/lib/postgresql/data
+      - coinwatch_data:/var/lib/postgresql/data
     ports:
       - 5432:5432
     environment:
