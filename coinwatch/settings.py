@@ -9,8 +9,8 @@ CONTEXT_LINES = 5
 THRESHOLD = 0.25
 REWARD = 0.95
 
-PG_USER = os.getenv("PG_USER", "")
-PG_PASS = os.getenv("PG_PASS", "")
-PG_HOST = os.getenv("PG_HOST", "")
-PG_PORT = os.getenv("PG_PORT", 5432)
-DB_NAME = os.getenv("DB_NAME", "")
+PG_USER = os.getenv("PG_USER", "admin")
+PG_PASS = os.getenv("PG_PASS", "postgres")
+PG_HOST = os.getenv("PG_HOST", "host.docker.internal")
+PG_PORT = os.getenv("PG_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "postgres")

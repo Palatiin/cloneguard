@@ -26,7 +26,8 @@ services:
       DB_NAME: postgres
       PG_USER: admin
       PG_PASS: postgres
-      PGHOST: db
+      PG_HOST: host.docker.internal
+      PG_PORT: 5432
     env_file:
       - ./coinwatch/.env
     depends_on:

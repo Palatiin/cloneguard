@@ -1,6 +1,6 @@
 # session.py
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -28,10 +28,12 @@ db_engine, db_session = create_db()
 
 class DBSchemaSetup:
     def __enter__(self):
-        db_engine.execute("drop schema if exists public cascade")
-        db_engine.execute("create schema public")
-        db_engine.execute("grant all on schema public to postgres")
-        Base.metadata.create_all(db_engine)
+        with db_engine.connect() as connection:
+            with connection.begin():
+                connection.execute(text("drop schema if exists public cascade"))
+                connection.execute(text("create schema public"))
+                connection.execute(text("grant all on schema public to admin"))
+                Base.metadata.create_all(connection)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         db_session.close_all()
@@ -42,4 +44,5 @@ class DBSession:
         ...
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        db_engine.close()
         db_session.close_all()
