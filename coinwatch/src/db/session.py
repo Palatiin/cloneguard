@@ -1,5 +1,6 @@
 # session.py
 
+import structlog
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
@@ -7,6 +8,8 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 
 from coinwatch import settings
 from coinwatch.src.db.schema import Base
+
+logger = structlog.get_logger(__name__)
 
 
 def create_db() -> (Engine, scoped_session, DeclarativeMeta):
@@ -41,8 +44,8 @@ class DBSchemaSetup:
 
 class DBSession:
     def __enter__(self):
-        ...
+        logger.info("DB session enter.")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        db_engine.close()
         db_session.close_all()
+        logger.info("Close DB session.")

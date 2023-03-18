@@ -1,11 +1,11 @@
 # searcher.py
 
-import re
 from dataclasses import dataclass, field
 from typing import List, Tuple
 
 from coinwatch.clients import Git
 from coinwatch.settings import CONTEXT_LINES
+from coinwatch.src.common import Filter
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context
 
@@ -28,27 +28,12 @@ class TargetContext:
 
 class Searcher:
     _levenshtein_threshold = 0.25
-    _re_lang_comment = {
-        "py": r'\s*(#|""").*?{}',
-        "c": r"\s*(/\*|//|/\*\*).*?{}",
-        "cpp": r"\s*(/\*|//|/\*\*).*?{}",
-    }
 
     def __init__(self, context: Tuple[Context, Context], target_repo: Git):
         self.context = context
         self.upper_context_lines = [pair[0] for pair in self.context[0].sentence_keyword_pairs]
         self.lower_context_lines = [pair[0] for pair in self.context[1].sentence_keyword_pairs]
         self.repo = target_repo
-
-    @staticmethod
-    def _in_test(filename: str) -> bool:
-        return "test" in filename
-
-    def _in_comment(self, file_extension: str, line: str, keyword: str) -> bool:
-        """Check whether the occurrence of the keyword is in comment."""
-        if re.search(self._re_lang_comment[file_extension].format(keyword), line, flags=re.S):
-            return True
-        return False
 
     def find_occurrences(self, keyword: str, key_sentence: str) -> List[Tuple[Sentence, float]]:
         """Find occurrence of context keywords in target repository."""
@@ -60,12 +45,10 @@ class Searcher:
             file, line_number, sentence = line.split(":", 2)
             sentence = sentence.strip()
             file_extension = file.split(".")[-1]
-            if self._in_test(file):
-                continue  # filter test files
-            if file_extension not in self._re_lang_comment.keys():
-                continue  # filter non-source code file extensions
-            if self._in_comment(file_extension, sentence, keyword):
-                continue  # filter occurrences in comments
+            if Filter.file(file, file_extension):
+                continue
+            if Filter.line(line, filename=file, file_ext=file_extension, keyword=keyword):
+                continue
             if (sim := Comparator.similarity(sentence, key_sentence)) <= self._levenshtein_threshold:
                 continue  # filter based on similarity
             # TODO filter based on sentence type
@@ -101,13 +84,11 @@ class Searcher:
         curr_lnum = occurrence.line_number - 1
         for line in file_lines[curr_lnum - 1 :: -1]:
             curr_lnum -= 1
-            if len(line_range) == ks_i:  # noqa - duplicate code
+            if len(line_range) == ks_i:
                 break
             line = line.strip()
-            if not line:
-                continue  # filter blank lines
-            if re.match(self._re_lang_comment[occurrence.file_extension].format(""), line):
-                continue  # filter comment lines
+            if Filter.line(line):
+                continue
             line_range.append((curr_lnum, line))
 
         # key statement
@@ -117,13 +98,11 @@ class Searcher:
         curr_lnum = occurrence.line_number - 1
         for line in file_lines[curr_lnum + 1 :]:
             curr_lnum += 1
-            if len(line_range) == CONTEXT_LINES:  # noqa
+            if len(line_range) == CONTEXT_LINES:
                 break
             line = line.strip()
-            if not line:
-                continue  # filter blank lines
-            if re.match(self._re_lang_comment[occurrence.file_extension].format(""), line):
-                continue  # filter comment lines
+            if Filter.line(line):
+                continue
             line_range.append((curr_lnum, line))
 
         return sorted(line_range, key=lambda x: x[0])
@@ -190,9 +169,7 @@ class Searcher:
             candidate_code: List[str] = []
             for line in file[start_line:end_line]:
                 line = line.strip()
-                if not line:
-                    continue
-                if self._in_comment(candidate.key_statements[0].file_extension, line, ""):
+                if Filter.line(line):
                     continue
                 candidate_code.append(line)
             if candidate_code:

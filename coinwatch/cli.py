@@ -5,10 +5,12 @@ from typing import Tuple
 import click
 import structlog
 
+import coinwatch.src.db.crud as crud
 from coinwatch.clients import CVEClient, Git
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
+from coinwatch.src.db.session import DBSession, db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.schemas import CVE
@@ -16,6 +18,14 @@ from coinwatch.src.searcher import Searcher
 from coinwatch.src.szz.szz import SZZ
 
 logger = structlog.get_logger(__name__)
+
+
+def session_wrapper(func):
+    def inner_wrapper(*args, **kwargs):
+        with DBSession():
+            func(*args, **kwargs)
+
+    return inner_wrapper
 
 
 @click.group()
@@ -27,23 +37,27 @@ def cli():
 @click.argument("cve", required=True, type=str)
 @click.argument("repo", required=False, type=str)
 def run(cve: str, repo: str):
-    logger.info("Scrape CVE...")
-    cve: CVE = CVEClient().cve_id(cve)
-    logger.info("Scrape CVE done.")
+    @session_wrapper
+    def wrapped_run(cve: str, repo: str):
+        logger.info("Scrape CVE...")
+        cve: CVE = CVEClient().cve_id(cve)
+        logger.info("Scrape CVE done.")
 
-    repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
+        repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
 
-    logger.info("Load references...")
-    load_references(repository, cve.references)
-    logger.info("Load references done.")
+        logger.info("Load references...")
+        load_references(repository, cve.references)
+        logger.info("Load references done.")
 
-    finder = FixCommitFinder(cve, repository)
-    fix_commits = finder.get_fix_commit()
-    logger.info(f"{fix_commits=}")
+        finder = FixCommitFinder(cve, repository)
+        fix_commits = finder.get_fix_commit()
+        logger.info(f"{fix_commits=}")
 
-    szz = SZZ(repository, fix_commits)
-    fix_big_commit_pairs = szz.run()
-    pass
+        szz = SZZ(repository, fix_commits)
+        # fix_big_commit_pairs = szz.run()
+        pass
+
+    return wrapped_run(cve, repo)
 
 
 @cli.command()
