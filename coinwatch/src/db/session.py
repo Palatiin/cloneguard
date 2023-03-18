@@ -30,6 +30,8 @@ db_engine, db_session = create_db()
 
 
 class DBSchemaSetup:
+    """Reinitialize DB, only for local testing development."""
+
     def __enter__(self):
         with db_engine.connect() as connection:
             with connection.begin():
@@ -43,6 +45,8 @@ class DBSchemaSetup:
 
 
 class DBSession:
+    """DB session wrapper, automatically closes connection to DB."""
+
     def __enter__(self):
         logger.info("DB session enter.")
 

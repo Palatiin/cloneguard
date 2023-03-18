@@ -1,4 +1,8 @@
+# common.py
+
 import re
+
+import structlog
 
 
 class Filter(object):
@@ -41,3 +45,15 @@ class Filter(object):
     @classmethod
     def _is_single_bracket(cls, line: str) -> bool:
         return bool(cls._re_brackets.match(line))
+
+
+def log_wrapper(func):
+    logger = structlog.get_logger(func.__name__)
+
+    def inner(*args, **kwargs):
+        logger.info(f"{func.__qualname__}: Start...")
+        result = func(*args, **kwargs)
+        logger.info(f"{func.__qualname__}: Done.")
+        return result
+
+    return inner

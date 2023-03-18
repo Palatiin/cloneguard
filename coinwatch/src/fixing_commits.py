@@ -39,11 +39,15 @@ Ideas:
 import json
 import re
 from datetime import timedelta
-from typing import List, Tuple
+from typing import List, Optional
 
 import nltk
 
-from coinwatch.clients import Git
+import coinwatch.src.db.crud as crud
+from coinwatch.clients import CVEClient, Git
+from coinwatch.src.common import log_wrapper
+from coinwatch.src.cve_reader import load_references
+from coinwatch.src.db.session import db_session
 from coinwatch.src.schemas import *
 
 # CANDIDATES_LIMIT = 100
@@ -73,20 +77,33 @@ class FixCommitFinder:
     _keyword_count = 10
     _whitelisted_word_tags = ["NN", "NNP", "NNS", "JJ", "VB", "VBN", "VBG"]
 
-    def __init__(self, cve: CVE, repo: Git):
-        self.issue = [ref for ref in cve.references if ref.type_ == ReferenceType.issue]
-        self.pull = [ref for ref in cve.references if ref.type_ == ReferenceType.pull]
-        self.release_notes = [ref for ref in cve.references if ref.type_ == ReferenceType.release_notes]
-        self.cve = cve
-        self.repo = repo
-        self.cve_keywords: List[str] = nltk.word_tokenize(cve.descriptions["en"][0])
-        self.cve_keywords: List[Tuple] = nltk.pos_tag(self.cve_keywords)
-        self.cve_keywords = list(
-            filter(lambda x: x[1] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower(), self.cve_keywords)
-        )
-        self.cve_keywords: List[str] = [kw[0] for kw in self.cve_keywords]
+    def __init__(self, repo: Git, cve: Optional[str] = None):
+        if not cve:
+            self.repo = repo
+            return
+        self.stored_cve = self.check_db(cve)
+        if self.stored_cve:
+            return
 
+        self.cve: CVE = CVEClient().cve_id(cve)
+        load_references(repo, self.cve.references)
+        self.issue = [ref for ref in self.cve.references if ref.type_ == ReferenceType.issue]
+        self.pull = [ref for ref in self.cve.references if ref.type_ == ReferenceType.pull]
+        self.release_notes = [ref for ref in self.cve.references if ref.type_ == ReferenceType.release_notes]
+        self.repo = repo
+        self.cve_keywords: List[str] = self._extract_keywords(self.cve.descriptions["en"][0])
+
+    def _extract_keywords(self, text: str, lang: str = "english") -> List[str]:
+        kwords = nltk.word_tokenize(text, language=lang)
+        kwords = nltk.pos_tag(kwords)
+        kwords = list(filter(lambda x: x[1] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower(), kwords))
+        return [kw[0] for kw in kwords]
+
+    @log_wrapper
     def get_fix_commit(self) -> List[str]:
+        if self.stored_cve:
+            return json.loads(self.stored_cve.fix_commit)
+
         fix_commits = []
 
         # ISSUE SCAN
@@ -187,6 +204,12 @@ class FixCommitFinder:
         commits = sorted(candidate_commits["commits"], key=lambda x: x[1], reverse=True)
         # TODO: if 'Merge' in commit, pull scan?
         return commits  # commits[0][0]
+
+    @staticmethod
+    def check_db(cve: str):
+        if cve := crud.bug.get_cve(db_session, cve):
+            return cve
+        return None
 
     def _is_get_pull_reference(self):
         issue_timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, self.issue.json["number"])

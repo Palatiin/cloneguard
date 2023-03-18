@@ -39,15 +39,11 @@ def cli():
 def run(cve: str, repo: str):
     @session_wrapper
     def wrapped_run(cve: str, repo: str):
-        logger.info("Scrape CVE...")
-        cve: CVE = CVEClient().cve_id(cve)
-        logger.info("Scrape CVE done.")
+        # cve: CVE = CVEClient().cve_id(cve)
 
         repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
 
-        logger.info("Load references...")
-        load_references(repository, cve.references)
-        logger.info("Load references done.")
+        # load_references(repository, cve.references)
 
         finder = FixCommitFinder(cve, repository)
         fix_commits = finder.get_fix_commit()

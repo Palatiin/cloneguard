@@ -25,7 +25,7 @@ class Comparator:
 
     @classmethod
     def similarity(cls, string_a: str, string_b: str) -> float:
-        """Normalize Levenshtein's distance metric."""
+        """Normalize Levenshtein's edit distance metric."""
         return cls.levenshtein.similarity(string_a, string_b)
 
     @classmethod

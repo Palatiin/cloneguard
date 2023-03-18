@@ -6,6 +6,7 @@ from typing import Any, Dict, Generator, List
 import structlog
 
 from coinwatch.clients import Git
+from coinwatch.src.common import log_wrapper
 from coinwatch.src.szz.git_parser import GitParser
 
 logger = structlog.get_logger(__name__)
@@ -25,7 +26,7 @@ class SZZ:
     # TODO filter comment lines
     RECURSION = 3
 
-    IGNORED_EXTENSIONS = [".txt", ".md", ".pdf", ".h", ".hpp"]
+    FILE_EXTENSIONS = [".py", ".c", ".cpp"]
 
     def __init__(self, repo: Git, commits: List[str]):
         self.repo = repo
@@ -34,16 +35,14 @@ class SZZ:
         self.fix_time = None
         # TODO prepare multiprocessing
 
+    @log_wrapper
     def run(self) -> Dict:
-        logger.info("Running SZZ algorithm.")
-
         annotated_files = {}
         for commit in self.commits:
             prev_commit = self.get_first_from_generator(self.repo.rev_list(commit_id=commit + "~1"))[0]
             commit_diff = self.repo.diff(prev_commit, commit)
             commit_diff = GitParser.parse_diff(commit_diff)
             annotated_files[commit] = self.annotate_files(commit, commit_diff)
-        logger.info("SZZ annotation done.")
 
         return annotated_files
 
@@ -69,7 +68,7 @@ class SZZ:
         """
         annotated_files: Dict[str, List[Node]] = {}
         for filename in commit_diff["affected_files"]:
-            if "." + filename.split(".")[-1] in self.IGNORED_EXTENSIONS:
+            if "." + filename.split(".")[-1] not in self.FILE_EXTENSIONS:
                 continue
             if "/test" in filename:
                 continue

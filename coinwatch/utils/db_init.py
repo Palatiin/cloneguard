@@ -17,9 +17,9 @@ def init(db):
         db,
         Project(
             id=2,
-            url="git@github.com:test/test.git",
-            name="test",
-            author="test",
+            url="git@github.com:dogecoin/dogecoin.git",
+            name="dogecoin",
+            author="dogecoin",
             language="cpp",
             watch=False,
             parent_id=project.id,
@@ -32,5 +32,5 @@ def init(db):
         ),
     )
     detection = crud.detection.create(
-        db, Detection(id=1, timestamp=dt.now(), confidence=1.0, bug=bug.id, project=child.id)
+        db, Detection(id=1, created=dt.now(), confidence=1.0, bug=bug.id, project=child.id)
     )

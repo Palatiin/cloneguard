@@ -49,7 +49,7 @@ class CRUDBase(t.Generic[ModelType]):
 
 class CRUDBug(CRUDBase[Bug]):
     def get_cve(self, db: Session, cve: str) -> t.Optional[ModelType]:
-        return db.query(self.model).filter(self.model.cve_id == cve).all()
+        return db.query(self.model).filter(self.model.cve_id == cve).first()
 
     def get_verified(self, db: Session, verified: bool) -> t.List[ModelType]:
         return db.query(self.model).filter(self.model.verified == verified).all()

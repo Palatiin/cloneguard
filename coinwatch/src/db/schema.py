@@ -3,6 +3,7 @@
 from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Sequence, String
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
+from sqlalchemy.sql import func
 
 from coinwatch.src.db.declarative_base import SchemaBase
 
@@ -22,6 +23,7 @@ class Bug(Base):
     fix_commit = Column(String(), nullable=True, default=[])
     patch = Column(String(), nullable=True, default=None)
     verified = Column(Boolean(), nullable=False, default=False)
+    created = Column(DateTime(), nullable=False, default=func.now())
 
     project = Column(Integer(), ForeignKey("project.id"))
     detections = relationship("Detection")
@@ -36,6 +38,7 @@ class Project(Base):
     author = Column(String(128), nullable=False)
     language = Column(String(32))
     watch = Column(Boolean(), nullable=False, default=False)
+    added = Column(DateTime(), nullable=False, default=func.now())
 
     parent_id = Column(Integer(), ForeignKey("project.id"), nullable=True, default=None)
     bugs = relationship("Bug")
@@ -47,7 +50,7 @@ class Detection(Base):
     __tablename__ = "detection"
 
     id = Column(Integer(), detection_id_sequence, primary_key=True)
-    timestamp = Column(DateTime(), nullable=False)
+    created = Column(DateTime(), nullable=False, default=func.now())
     confidence = Column(Float(), nullable=False)
 
     bug = Column(Integer(), ForeignKey("bug.id"))
