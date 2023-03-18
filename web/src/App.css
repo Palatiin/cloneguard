@@ -1,0 +1,16 @@
+body {
+  margin: 0;
+  padding: 0;
+  text-align: center;
+}
+
+.app {
+  max-width: none;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: left;
+}
+
+h1 {
+  text-align: center;
+}
