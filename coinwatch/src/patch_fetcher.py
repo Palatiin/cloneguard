@@ -1,8 +1,9 @@
 # patch_fetcher.py
 
-import re
 from enum import Enum
 from typing import List
+
+from coinwatch.src.common import Filter
 
 
 class PatchType(int, Enum):
@@ -20,32 +21,21 @@ class PatchCode:
     code_deletions: List[str] = []
     code_additions: List[str] = []
 
-    _re_comment = re.compile(r"\s*(/\*|//|/\*\*).*?")
-
     def __init__(self, patch: List[str]):
         self.patch = patch
-
-    def _filter(self, line: str) -> bool:
-        if not line:
-            return True
-        if self._re_comment.match(line):
-            return True
-        return False
 
     def fetch(self):
         """Fetch code from patch."""
         additions, deletions = 0, 0
         for line in self.patch:
             line = line.strip()
+            if Filter.line(line):
+                continue
             if line.startswith("-"):
-                if self._filter(line):
-                    continue
                 deletions += 1
                 self.code_deletions.append(line[1:].strip())
                 self.code.append(line[1:].strip())
             elif line.startswith("+"):
-                if self._filter(line):
-                    continue
                 additions += 1
                 self.code_additions.append(line[1:].strip())
                 self.code.append(line[1:].strip())

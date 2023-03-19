@@ -8,6 +8,7 @@ import structlog
 
 from coinwatch.clients import Git
 from coinwatch.settings import USER_AGENT
+from coinwatch.src.common import log_wrapper
 from coinwatch.src.schemas import *
 
 __all__ = ["load_references"]
@@ -20,6 +21,7 @@ _re_release_notes = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/
 logger = structlog.get_logger(__name__)
 
 
+@log_wrapper
 def load_references(repo: Git, references: List[Reference]) -> NoReturn:
     _headers = {
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",

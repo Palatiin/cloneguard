@@ -4,6 +4,8 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from coinwatch.src.common import Filter
+
 
 @dataclass
 class Context:
@@ -55,6 +57,8 @@ class Extractor:
             if line[0] in ("+", "-"):
                 # skip patch lines
                 is_lower = int(True)
+                continue
+            if Filter.line(line):
                 continue
 
             # tokenize context lines

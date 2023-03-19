@@ -10,6 +10,7 @@ from typing import Dict, List, NoReturn, Optional
 import requests
 import structlog
 
+from coinwatch.src.common import log_wrapper
 from coinwatch.src.schemas import *
 
 logger = structlog.get_logger(__name__)
@@ -93,6 +94,7 @@ class CVEClient(object):
         with open(f"_cache/cve/{cve.upper()}", "w") as file:
             file.write(cve_data)
 
+    @log_wrapper
     def cve_id(self, cve: str) -> Optional[CVE]:
         """
         Fetch CVE data utilizing API param 'cveId'.
