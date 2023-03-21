@@ -6,7 +6,7 @@ from typing import Generator, List, NoReturn, Optional
 
 import structlog
 
-from coinwatch.clients import GitHubAPI
+from coinwatch.clients.github import GitHubAPI
 from coinwatch.src.common import log_wrapper
 
 logger = structlog.get_logger(__name__)
@@ -22,7 +22,7 @@ class Git:
     api = GitHubAPI()
     _re_url_contents = re.compile(r"[/:](?P<owner>\w+)/(?P<repo>\w+)\.git")
 
-    base_path = "_cache/clones"
+    base_path = "coinwatch/_cache/clones"
 
     @log_wrapper
     def __init__(self, url: str):
@@ -102,11 +102,12 @@ class Git:
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         return process.stdout.decode(errors="replace").split("\n")
 
-    def grep(self, pattern) -> List[str]:
+    def grep(self, pattern: str) -> Generator:
         command = ["git", "grep", "-n", pattern]
         logger.info("git: grep: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        return process.stdout.decode(errors="replace").split("\n")
+        for occurrence in process.stdout.decode(errors="replace").splitlines():
+            yield occurrence
 
     def open_file(self, path: str) -> List[str]:
         with open(f"{self.path_to_repo}/{path}", "r", encoding="UTF-8") as file:

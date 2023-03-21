@@ -4,7 +4,7 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
-from coinwatch.src.common import Filter
+from coinwatch.src.common import Filter, log_wrapper
 
 
 @dataclass
@@ -34,6 +34,7 @@ class Extractor:
         """
         return self._re_token.findall(line)
 
+    @log_wrapper
     def extract(self, patch: str) -> Tuple[Context, Context]:
         """Extract Upper and Lower patch context.
 

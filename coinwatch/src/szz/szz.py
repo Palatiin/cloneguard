@@ -5,7 +5,7 @@ from typing import Any, Dict, Generator, List
 
 import structlog
 
-from coinwatch.clients import Git
+from coinwatch.clients.git import Git
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.szz.git_parser import GitParser
 

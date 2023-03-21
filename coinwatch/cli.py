@@ -6,7 +6,10 @@ import click
 import structlog
 
 import coinwatch.src.db.crud as crud
-from coinwatch.clients import CVEClient, Git
+from coinwatch.clients.blockscope import BlockScope
+from coinwatch.clients.cve import CVEClient
+from coinwatch.clients.git import Git
+from coinwatch.clients.simian import Simian
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
@@ -38,14 +41,51 @@ def cli():
 @click.argument("repo", required=False, type=str)
 def run(cve: str, repo: str):
     @session_wrapper
-    def wrapped_run(cve: str, repo: str):
+    def wrapped_run(cve: str, repo: str):  # noqa
         # cve: CVE = CVEClient().cve_id(cve)
+
+        rs = Simian().run(
+            "static GlobalMutex g_warnings_mutex;\nstatic bilingual_str g_misc_warnings GUARDED_BY(g_warnings_mutex);\nstatic bool fLargeWorkInvalidChainFound GUARDED_BY(g_warnings_mutex) = false;",
+            "cpp",
+            "coinwatch/_cache/clones/bitcoin/**/*.cpp",
+        )
+        print(rs)
 
         repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
 
+        rb = BlockScope(
+            """
+            #include <warnings.h>
+
+            #include <sync.h>
+            #include <util/string.h>
+            #include <util/system.h>
+            #include <util/translation.h>
+
+            #include <vector>
+
+            + static GlobalMutex g_warnings_mutex;
+            + static bilingual_str g_misc_warnings GUARDED_BY(g_warnings_mutex);
+            + static bool fLargeWorkInvalidChainFound GUARDED_BY(g_warnings_mutex) = false;
+
+            void SetMiscWarning(const bilingual_str& warning)
+            {
+                LOCK(g_warnings_mutex);
+                g_misc_warnings = warning;
+            }
+
+            void SetfLargeWorkInvalidChainFound(bool flag)
+            {
+                LOCK(g_warnings_mutex);
+                fLargeWorkInvalidChainFound = flag;
+            }
+        """
+        ).run(repository)
+        print(rb)
+
         # load_references(repository, cve.references)
 
-        finder = FixCommitFinder(cve, repository)
+        finder = FixCommitFinder(repository, cve)
         fix_commits = finder.get_fix_commit()
         logger.info(f"{fix_commits=}")
 

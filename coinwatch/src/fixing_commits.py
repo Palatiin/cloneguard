@@ -44,7 +44,8 @@ from typing import List, Optional
 import nltk
 
 import coinwatch.src.db.crud as crud
-from coinwatch.clients import CVEClient, Git
+from coinwatch.clients.cve import CVEClient
+from coinwatch.clients.git import Git
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.db.session import db_session
