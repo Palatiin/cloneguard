@@ -1,6 +1,5 @@
 # cli.py
 
-from copy import deepcopy
 from typing import List, Tuple
 
 import click
@@ -15,6 +14,7 @@ from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
 from coinwatch.src.db.session import DBSession, db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
+from coinwatch.src.notifications import Postman
 from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.schemas import CVE
 from coinwatch.src.searcher import Searcher
@@ -83,6 +83,28 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
         logger.info("cli: Run finished.")
 
     return wrapped_run(cve, repo, simian, repo_date)
+
+
+@cli.command()
+def scanner():
+    @session_wrapper
+    def wrapped_scanner():
+        logger.info("cli: Daily scan started.")
+        watched = [Git(repo) for repo in crud.project.get_all_watched(db_session)]
+        update_repos(watched)
+
+        for repo in watched:
+            logger.info(f"cli: Scanning project.", repo=repo.repo)
+            finder = FixCommitFinder(repo)
+            commits = finder.scan_recent()
+            if not commits:
+                logger.info(f"cli: Project OK.", repo=repo.repo)
+                continue
+            logger.info(f"cli: {repo.repo} found bug-fixes.", commits=commits)
+            Postman().notify_bug_detection(commits, repo)
+        logger.info("cli: Daily scan finished.")
+
+    return wrapped_scanner()
 
 
 @cli.command()

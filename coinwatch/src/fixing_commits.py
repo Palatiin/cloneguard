@@ -36,12 +36,13 @@ Ideas:
     CVE.json["configurations"] - extract affected project versions
 """
 
+import datetime as dt
 import json
 import re
-from datetime import timedelta
 from typing import List, Optional
 
 import nltk
+import structlog
 
 import coinwatch.src.db.crud as crud
 from coinwatch.clients.cve import CVEClient
@@ -56,6 +57,7 @@ from coinwatch.src.schemas import CVE, ReferenceType
 
 nltk.download("punkt", quiet=True)
 nltk.download("averaged_perceptron_tagger", quiet=True)
+logger = structlog.get_logger(__name__)
 
 
 class FixCommitFinder:
@@ -71,7 +73,7 @@ class FixCommitFinder:
             "change_log_1": re.compile(r"#(\d+)\s*`(\w+)`\s*(.*)"),
         },
         "default": {
-            "keyword": re.compile(r"[Ff]ix|[Bb]ug"),
+            "keyword": re.compile(r"fix|\bbug|CVE-\d+|CWE-\d+", flags=re.IGNORECASE),
             "issue": re.compile(r"issue\s*#(\d+)\b"),
         },
     }
@@ -113,15 +115,30 @@ class FixCommitFinder:
             fix_commits = self.get_fix_commit()
             if not fix_commits:
                 return None
-            bug = Bug(cve_id=self.cve.id_ if self.cve else None, project=self.repo.id)
+            bug = Bug(cve_id=self.cve.id_ if self.cve else "SCAN", project=self.repo.id)
             bug.commits = fix_commits
             self.stored_cve = crud.bug.create(db_session, bug)
         return self.stored_cve
+
+    def scan_recent(self):
+        time_window = dt.datetime.now() - dt.timedelta(days=3)  # TODO: just tmp 3 days
+        recent_commits = self.repo.rev_list(after=time_window.strftime("%Y-%m-%d"))
+
+        candidates = []
+        for _hash, commit in recent_commits:
+            if keyword := self._res["default"]["keyword"].search(commit):
+                keyword = keyword.group(0)
+                logger.info(f"scan_recent: Matched {keyword=}.")
+                candidates.append(_hash)
+
+        return candidates
 
     @log_wrapper
     def get_fix_commit(self) -> List[str]:
         if self.stored_cve:
             return json.loads(self.stored_cve.fix_commit)
+        if not self.cve:
+            return self.scan_recent()
 
         fix_commits = []
 
@@ -201,8 +218,8 @@ class FixCommitFinder:
         return commits  # self._select_commit(change_log[0][4])
 
     def default_scan(self) -> List[str]:
-        _after = f"{self.cve.published - timedelta(days=10):%Y-%m-%d}"
-        _before = f"{self.cve.published + timedelta(days=2):%Y-%m-%d}"
+        _after = f"{self.cve.published - dt.timedelta(days=10):%Y-%m-%d}"
+        _before = f"{self.cve.published + dt.timedelta(days=2):%Y-%m-%d}"
         candidate_commits = {"count": 0, "commits": []}
 
         for _hash, commit in self.repo.rev_list(after=_after, before=_before, tag_range=get_tag_range(self.cve)):

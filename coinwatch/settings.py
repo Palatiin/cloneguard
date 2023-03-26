@@ -18,3 +18,6 @@ PG_PASS = os.getenv("PG_PASS", "postgres")
 PG_HOST = os.getenv("PG_HOST", "host.docker.internal")
 PG_PORT = os.getenv("PG_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "postgres")
+
+SMTP_LOGIN = os.getenv("SMTP_LOGIN")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
