@@ -1,13 +1,18 @@
 # git.py
 
+import os
 import re
 import subprocess
 from typing import Generator, List, NoReturn, Optional
 
 import structlog
 
-from coinwatch.clients import GitHubAPI
+import coinwatch.src.db.crud as crud
+from coinwatch.clients.github import GitHubAPI
+from coinwatch.settings import CACHE_PATH
 from coinwatch.src.common import log_wrapper
+from coinwatch.src.db.schema import Project
+from coinwatch.src.db.session import db_session
 
 logger = structlog.get_logger(__name__)
 
@@ -22,24 +27,27 @@ class Git:
     api = GitHubAPI()
     _re_url_contents = re.compile(r"[/:](?P<owner>\w+)/(?P<repo>\w+)\.git")
 
-    base_path = "_cache/clones"
+    base_path = f"{CACHE_PATH}/clones"
 
     @log_wrapper
-    def __init__(self, url: str):
-        """Initialize git repository object."""
-        url_contents = self._re_url_contents.search(url)
-        if not url_contents:
-            logger.error("clients: git: Couldn't extract repo name from url.")
-            return
-        self.url = url
-        self.owner = url_contents.group("owner")
-        self.repo = url_contents.group("repo")
+    def __init__(self, project: str | Project):
+        project = project if isinstance(project, Project) else crud.project.get_by_name(db_session, project)
+
+        self.url = project.url
+        self.owner = project.author
+        self.repo = project.name
         self.path_to_repo = f"{self.base_path}/{self.repo}"
+        self.language = project.language
+
+        if not os.path.exists(self.path_to_repo):
+            self.clone()
 
     @log_wrapper
     def clone(self) -> NoReturn:
         """Create copy of repository in _cache/clones/ in project files."""
-        command = ["git", "clone", self.url, self.base_path]
+        os.makedirs(self.path_to_repo, exist_ok=True)
+
+        command = ["git", "clone", self.url, self.path_to_repo]
         logger.info("git: clone: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, stdout=subprocess.PIPE)
         if process.returncode != 0:
@@ -76,12 +84,11 @@ class Git:
         command += ["--", file] if file else []
 
         logger.info("git: rev_list: Command: " + " ".join(command), repo=self.repo)
-        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        hashes = process.stdout.decode("ascii").split()
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE, universal_newlines=True)
+        hashes = process.stdout.split()
 
         for _hash in hashes:
-            commit = self.show(_hash, quiet=True)
-            yield _hash, commit
+            yield _hash, self.show(_hash, quiet=True)
 
     def show(self, _hash: str, quiet: Optional[bool] = True) -> str:
         command = ["git", "show", "--quiet" if quiet else "", "--date=iso", _hash]
@@ -102,11 +109,12 @@ class Git:
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         return process.stdout.decode(errors="replace").split("\n")
 
-    def grep(self, pattern) -> List[str]:
+    def grep(self, pattern: str) -> Generator:
         command = ["git", "grep", "-n", pattern]
         logger.info("git: grep: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        return process.stdout.decode(errors="replace").split("\n")
+        for occurrence in process.stdout.decode(errors="replace").splitlines():
+            yield occurrence
 
     def open_file(self, path: str) -> List[str]:
         with open(f"{self.path_to_repo}/{path}", "r", encoding="UTF-8") as file:
@@ -125,7 +133,7 @@ class Git:
 
     def get_version_from_date(self, date: str) -> NoReturn:
         rev_list = self.rev_list(before=date)
-        rev = next(rev_list)
+        rev = next(rev_list)[0]
         del rev_list
 
         command = ["git", "reset", "--hard", rev]

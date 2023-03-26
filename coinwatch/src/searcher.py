@@ -3,9 +3,9 @@
 from dataclasses import dataclass, field
 from typing import List, Tuple
 
-from coinwatch.clients import Git
+from coinwatch.clients.git import Git
 from coinwatch.settings import CONTEXT_LINES
-from coinwatch.src.common import Filter
+from coinwatch.src.common import Filter, log_wrapper
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context
 
@@ -45,7 +45,7 @@ class Searcher:
             file, line_number, sentence = line.split(":", 2)
             sentence = sentence.strip()
             file_extension = file.split(".")[-1]
-            if Filter.file(file, file_extension):
+            if Filter.file(filename=file, file_ext=file_extension):
                 continue
             if Filter.line(line, filename=file, file_ext=file_extension, keyword=keyword):
                 continue
@@ -177,10 +177,11 @@ class Searcher:
 
         return candidate_code_list
 
+    @log_wrapper
     def search(self) -> List[List[str]]:
         """Find and return candidate codes in target repository."""
         context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
-        key_statement_pos = [[-1, -1, 1.0], [-1, -1, 1.0]]
+        key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
         for i, context in enumerate(self.context):
@@ -192,7 +193,7 @@ class Searcher:
                     continue
                 occurrence: Tuple
                 max_similarity_index, occurrence = max(enumerate(occurrences), key=lambda x: x[1][1])
-                if occurrence[1] < key_statement_pos[i][2]:
+                if occurrence[1] > key_statement_pos[i][2]:
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
                 elif occurrence[1] == key_statement_pos[i][2] and len(keyword) > len(
                     context.sentence_keyword_pairs[key_statement_pos[i][0]][1]

@@ -1,14 +1,12 @@
 FROM python:3.11-slim
 
-RUN apt-get update -yqq && apt-get install -yqq curl
+RUN apt-get update -yqq && \
+    apt-get install -yqq curl git default-jdk && \
+	rm -rf /var/lib/apt/lists/*
 
 RUN python -m pip install --upgrade pip
 RUN curl -sSL https://install.python-poetry.org | POETRY_HOME=/usr/local python3 - && \
 	poetry config virtualenvs.create false
-
-#WORKDIR /opt
-#COPY requirements.in .
-#RUN pip install -r requirements.txt --ignore-installed
 
 WORKDIR /app
 ENV PYTHONPATH "/app:${PYTHONPATH}"
@@ -20,4 +18,6 @@ RUN poetry check && \
 
 COPY ./coinwatch /app/coinwatch
 
+RUN echo "[safe]" >> ~/.gitconfig && \
+    echo "    directory = *" >> ~/.gitconfig
 RUN python3 -m coinwatch.utils.nltk_init

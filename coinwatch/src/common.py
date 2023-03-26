@@ -1,5 +1,6 @@
 # common.py
 
+import os
 import re
 
 import structlog
@@ -24,7 +25,7 @@ class Filter(object):
 
     @classmethod
     def file(cls, filename: str, file_ext: str) -> bool:
-        return cls._in_test(filename) | bool(file_ext in cls._re_lang_comment.keys())
+        return cls._in_test(filename) | bool(file_ext not in cls._re_lang_comment.keys())
 
     @staticmethod
     def _in_test(filename: str) -> bool:
@@ -49,11 +50,12 @@ class Filter(object):
 
 def log_wrapper(func):
     logger = structlog.get_logger(func.__name__)
+    pid = os.getpid()
 
     def inner(*args, **kwargs):
-        logger.info(f"{func.__qualname__}: Start...")
+        logger.info(f"{func.__qualname__}: Start...", pid=pid)
         result = func(*args, **kwargs)
-        logger.info(f"{func.__qualname__}: Done.")
+        logger.info(f"{func.__qualname__}: Done.", pid=pid)
         return result
 
     return inner

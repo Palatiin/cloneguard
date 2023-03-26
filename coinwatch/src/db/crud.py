@@ -59,6 +59,9 @@ class CRUDProject(CRUDBase[Project]):
     def get_by_name(self, db: Session, name: str) -> t.Optional[ModelType]:
         return db.query(self.model).filter(self.model.name == name).first()
 
+    def get_all_clones(self, db: Session, source: ModelType) -> t.List[ModelType]:
+        return db.query(self.model).filter(self.model.parent_id == source.id).all()
+
 
 class CRUDDetection(CRUDBase[Detection]):
     ...

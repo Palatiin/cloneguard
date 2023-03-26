@@ -5,8 +5,8 @@ from typing import Any, Dict, Generator, List
 
 import structlog
 
-from coinwatch.clients import Git
-from coinwatch.src.common import log_wrapper
+from coinwatch.clients.git import Git
+from coinwatch.src.common import Filter, log_wrapper
 from coinwatch.src.szz.git_parser import GitParser
 
 logger = structlog.get_logger(__name__)
@@ -68,9 +68,7 @@ class SZZ:
         """
         annotated_files: Dict[str, List[Node]] = {}
         for filename in commit_diff["affected_files"]:
-            if "." + filename.split(".")[-1] not in self.FILE_EXTENSIONS:
-                continue
-            if "/test" in filename:
+            if Filter.file(filename, file_ext=filename.split(".")[-1]):
                 continue
             file_diff = commit_diff[filename]
             annotated_files[filename] = self.annotate_lines(commit, filename, file_diff)

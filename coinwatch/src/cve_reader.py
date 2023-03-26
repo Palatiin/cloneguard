@@ -6,7 +6,7 @@ from typing import List, NoReturn
 
 import structlog
 
-from coinwatch.clients import Git
+from coinwatch.clients.git import Git
 from coinwatch.settings import USER_AGENT
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.schemas import *
