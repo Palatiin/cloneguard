@@ -1,15 +1,14 @@
 # cli.py
 
-from typing import Tuple
+from typing import List, Tuple
 
 import click
 import structlog
 
 import coinwatch.src.db.crud as crud
-from coinwatch.clients.blockscope import BlockScope
 from coinwatch.clients.cve import CVEClient
+from coinwatch.clients.detection_methods import BlockScope, Simian
 from coinwatch.clients.git import Git
-from coinwatch.clients.simian import Simian
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
@@ -19,6 +18,7 @@ from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.schemas import CVE
 from coinwatch.src.searcher import Searcher
 from coinwatch.src.szz.szz import SZZ
+from coinwatch.src.update_repos import get_repo_objects, update_repos
 
 logger = structlog.get_logger(__name__)
 
@@ -37,9 +37,48 @@ def cli():
 
 
 @cli.command()
+@click.argument("cve", required=True, type=str, nargs=1)
+@click.argument("repo", required=False, type=str, nargs=1)
+@click.argument("simian", required=False, type=bool, nargs=1)
+@click.argument("repo_date", required=False, type=str, nargs=1)
+def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = ""):
+    """Run the detection.
+
+    CVE: ID of vulnerability to scan
+    REPO: source repository where vulnerability was discovered
+    SIMIAN: switch to use tool Simian for clone detection
+    REPO_DATE: freeze scanned repositories at this date
+    """
+
+    @session_wrapper
+    def wrapped_run(cve: str, repo: str, simian: bool, repo_date: str):
+        logger.info("cli: Run started.")
+
+        repo: Git = Git(repo)
+        fix_commits: List[str] = FixCommitFinder(repo, cve=cve).get_fix_commit()
+        logger.info(f"Detected fix commits: {fix_commits}")
+        # patch_code: str = input("Input patch code/clone detection test:\n")
+        patch_code = 'if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())\n         return state.DoS(100, false, REJECT_INVALID, "bad-cb-missing", false, "first tx is not coinbase");\n     for (unsigned int i = 1; i < block.vtx.size(); i++)\n         if (block.vtx[i]->IsCoinBase())\n             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");\n \n     // Check transactions\n     for (const auto& tx : block.vtx)\n-        if (!CheckTransaction(*tx, state, false))\n+        if (!CheckTransaction(*tx, state, true))\n             return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),\n                                  strprintf("Transaction check failed (tx hash %s) %s", tx->GetHash().ToString(), state.GetDebugMessage()));\n \n     unsigned int nSigOps = 0;\n     for (const auto& tx : block.vtx)\n     {\n         nSigOps += GetLegacySigOpCount(*tx);\n     }\n     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)\n         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");'
+        patch_code = 'qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr)'
+
+        cloned_repos: List[Git] = get_repo_objects(source=repo)
+        update_repos(cloned_repos, repo_date)
+
+        detection_method = (Simian if simian else BlockScope)(patch_code)
+        for clone in cloned_repos:
+            detection_result = detection_method.run(clone)
+            detection_result = [result for result in detection_result if result[0] is not None]
+            logger.info(f"{detection_result=}", repo=clone.repo)
+
+        logger.info("cli: Run finished.")
+
+    return wrapped_run(cve, repo, simian, repo_date)
+
+
+@cli.command()
 @click.argument("cve", required=True, type=str)
 @click.argument("repo", required=False, type=str)
-def run(cve: str, repo: str):
+def legacy_run(cve: str, repo: str):
     @session_wrapper
     def wrapped_run(cve: str, repo: str):  # noqa
         # cve: CVE = CVEClient().cve_id(cve)
@@ -83,9 +122,7 @@ def run(cve: str, repo: str):
         ).run(repository)
         print(rb)
 
-        # load_references(repository, cve.references)
-
-        finder = FixCommitFinder(repository, cve)
+        finder = FixCommitFinder(repository, cve, cache=False)
         fix_commits = finder.get_fix_commit()
         logger.info(f"{fix_commits=}")
 

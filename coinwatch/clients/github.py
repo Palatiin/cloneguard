@@ -43,10 +43,7 @@ class GitHubAPI:
             Pull request if found else None.
         """
         response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}", headers=self._headers)
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()
 
     def get_commits_on_pull(self, owner: str, repo: str, pull_number: int):
         """
@@ -65,10 +62,7 @@ class GitHubAPI:
         response = requests.get(
             f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}/commits", headers=self._headers
         )
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()
 
     def get_affected_files_by_pull(self, owner: str, repo: str, pull_number: int):
         """
@@ -87,10 +81,7 @@ class GitHubAPI:
         response = requests.get(
             f"{self.base_url}/repos/{owner}/{repo}/pulls/{pull_number}/files", headers=self._headers
         )
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()
 
     def get_issue(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
         """
@@ -107,10 +98,7 @@ class GitHubAPI:
             Issue data if found else None.
         """
         response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}", headers=self._headers)
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()
 
     def get_issue_timeline(self, owner: str, repo: str, issue_number: int) -> Optional[Dict]:
         """
@@ -129,10 +117,7 @@ class GitHubAPI:
         response = requests.get(
             f"{self.base_url}/repos/{owner}/{repo}/issues/{issue_number}/timeline?per_page=100", headers=self._headers
         )
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()
 
     def get_file(self, owner: str, repo: str, path: str) -> Optional[Dict]:
         """
@@ -149,7 +134,4 @@ class GitHubAPI:
             Encoded file data
         """
         response = requests.get(f"{self.base_url}/repos/{owner}/{repo}/contents/{path}", headers=self._headers)
-        if response.status_code != 200:
-            return
-
-        return response.json()
+        return None if response.status_code != 200 else response.json()

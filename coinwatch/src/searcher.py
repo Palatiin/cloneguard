@@ -181,7 +181,7 @@ class Searcher:
     def search(self) -> List[List[str]]:
         """Find and return candidate codes in target repository."""
         context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
-        key_statement_pos = [[-1, -1, 1.0], [-1, -1, 1.0]]
+        key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
         for i, context in enumerate(self.context):
@@ -193,7 +193,7 @@ class Searcher:
                     continue
                 occurrence: Tuple
                 max_similarity_index, occurrence = max(enumerate(occurrences), key=lambda x: x[1][1])
-                if occurrence[1] < key_statement_pos[i][2]:
+                if occurrence[1] > key_statement_pos[i][2]:
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
                 elif occurrence[1] == key_statement_pos[i][2] and len(keyword) > len(
                     context.sentence_keyword_pairs[key_statement_pos[i][0]][1]

@@ -53,8 +53,8 @@ from coinwatch.src.schemas import *
 
 # CANDIDATES_LIMIT = 100
 
-nltk.download("punkt")
-nltk.download("averaged_perceptron_tagger")
+nltk.download("punkt", quiet=True)
+nltk.download("averaged_perceptron_tagger", quiet=True)
 
 
 class FixCommitFinder:
@@ -76,13 +76,20 @@ class FixCommitFinder:
     }
 
     _keyword_count = 10
-    _whitelisted_word_tags = ["NN", "NNP", "NNS", "JJ", "VB", "VBN", "VBG"]
+    _whitelisted_word_tags = ["NN", "VB", "JJ"]
 
-    def __init__(self, repo: Git, cve: Optional[str] = None):
+    def __init__(self, repo: Git, cve: Optional[str] = None, cache: bool = False):
+        """Initialize commit finder.
+
+        Args:
+            repo (Git): scanned repository
+            cve (str): searched CVE identifier
+            cache (bool): use cached data in DB
+        """
         if not cve:
             self.repo = repo
             return
-        self.stored_cve = self.check_db(cve)
+        self.stored_cve = self.check_db(cve) if cache else None
         if self.stored_cve:
             return
 
@@ -97,7 +104,7 @@ class FixCommitFinder:
     def _extract_keywords(self, text: str, lang: str = "english") -> List[str]:
         kwords = nltk.word_tokenize(text, language=lang)
         kwords = nltk.pos_tag(kwords)
-        kwords = list(filter(lambda x: x[1] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower(), kwords))
+        kwords = [x for x in kwords if x[1][:2] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower()]
         return [kw[0] for kw in kwords]
 
     @log_wrapper
@@ -183,10 +190,8 @@ class FixCommitFinder:
         return commits  # self._select_commit(change_log[0][4])
 
     def default_scan(self) -> List[str]:
-        _after = self.cve.published - timedelta(days=10)
-        _after = _after.strftime("%Y-%m-%d")
-        _before = self.cve.published + timedelta(days=2)
-        _before = _before.strftime("%Y-%m-%d")
+        _after = f"{self.cve.published - timedelta(days=10):%Y-%m-%d}"
+        _before = f"{self.cve.published + timedelta(days=2):%Y-%m-%d}"
         candidate_commits = {"count": 0, "commits": []}
 
         for _hash, commit in self.repo.rev_list(after=_after, before=_before, tag_range=get_tag_range(self.cve)):
@@ -230,9 +235,9 @@ class FixCommitFinder:
 
     def _rn_change_log_eval(self, text):
         value = 0
-        for keyword, weight in self.cve_keywords:
+        for keyword in self.cve_keywords:
             if keyword in text:
-                value += weight
+                value += 1
         return value
 
     def _select_commit(self, commits, kw_check: bool = False):

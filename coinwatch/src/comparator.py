@@ -63,5 +63,4 @@ class Comparator:
                 if del_sim >= add_sim:
                     return False, sim
                 return True, sim
-            logger.info(f"comparator: determine_patch_application.failed ({del_sim=}, {add_sim=})")
             return None, del_sim + add_sim

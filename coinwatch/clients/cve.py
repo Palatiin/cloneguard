@@ -10,6 +10,7 @@ from typing import Dict, List, NoReturn, Optional
 import requests
 import structlog
 
+from coinwatch.settings import CACHE_PATH
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.schemas import *
 
@@ -85,13 +86,13 @@ class CVEClient(object):
 
     @staticmethod
     def load_cve_from_cache(cve: str) -> dict:
-        with open(f"_cache/cve/{cve.upper()}", "r") as file:
+        with open(f"{CACHE_PATH}/cve/{cve.upper()}", "r") as file:
             cve_data = "".join(file.readlines())
         return json.loads(cve_data)
 
     @staticmethod
     def save_cve_to_cache(cve: str, cve_data: str) -> NoReturn:
-        with open(f"_cache/cve/{cve.upper()}", "w") as file:
+        with open(f"{CACHE_PATH}/cve/{cve.upper()}", "w") as file:
             file.write(cve_data)
 
     @log_wrapper
@@ -110,11 +111,13 @@ class CVEClient(object):
         if not self._re_cve.match(cve):
             return
 
-        if os.path.exists(f"_cache/cve/{cve.upper()}"):  # TMP - will be helpful for gathering stats for ref tags usage
+        if os.path.exists(
+            f"{CACHE_PATH}/cve/{cve.upper()}"
+        ):  # TMP - will be helpful for gathering stats for ref tags usage
             logger.info(f"clients: cve: Using cached data for {cve}.")
             return self._parse_output(self.load_cve_from_cache(cve))
-        elif not os.path.exists("_cache/cve/"):
-            os.mkdir("_cache/cve/")
+        elif not os.path.exists(f"{CACHE_PATH}/cve"):
+            os.makedirs(f"{CACHE_PATH}/cve")
 
         logger.info(f"clients: cve: Fetching {cve} from API.")
         response = requests.get(self.base_url, params={"cveId": cve})
