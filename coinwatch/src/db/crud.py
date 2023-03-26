@@ -29,16 +29,8 @@ class CRUDBase(t.Generic[ModelType]):
     def get_all(self, db: Session) -> t.List[ModelType]:
         return db.query(self.model).all()
 
-    def update(self, db: Session, db_obj: ModelType, obj_new: ModelType) -> ModelType:  # noqa
-        obj_new = obj_new.__dict__
-        for field in obj_new.keys():
-            if field[0] == "_" or isinstance(obj_new[field], list):
-                continue
-            setattr(db_obj, field, obj_new[field])
-
-        db.add(db_obj)
+    def update(self, db: Session, db_obj: ModelType) -> ModelType:  # noqa
         db.commit()
-        db.refresh(db_obj)
         return db_obj
 
     def delete(self, db: Session, obj: ModelType) -> t.Optional[ModelType]:  # noqa

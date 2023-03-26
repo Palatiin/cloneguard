@@ -48,8 +48,9 @@ from coinwatch.clients.cve import CVEClient
 from coinwatch.clients.git import Git
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.cve_reader import load_references
+from coinwatch.src.db.schema import Bug
 from coinwatch.src.db.session import db_session
-from coinwatch.src.schemas import *
+from coinwatch.src.schemas import CVE, ReferenceType
 
 # CANDIDATES_LIMIT = 100
 
@@ -89,8 +90,8 @@ class FixCommitFinder:
         if not cve:
             self.repo = repo
             return
-        self.stored_cve = self.check_db(cve) if cache else None
-        if self.stored_cve:
+        self.stored_cve = self.check_db(cve)
+        if cache and self.stored_cve:
             return
 
         self.cve: CVE = CVEClient().cve_id(cve)
@@ -106,6 +107,16 @@ class FixCommitFinder:
         kwords = nltk.pos_tag(kwords)
         kwords = [x for x in kwords if x[1][:2] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower()]
         return [kw[0] for kw in kwords]
+
+    def get_bug(self) -> Bug | None:
+        if not self.stored_cve:
+            fix_commits = self.get_fix_commit()
+            if not fix_commits:
+                return None
+            bug = Bug(cve_id=self.cve.id_ if self.cve else None, project=self.repo.id)
+            bug.commits = fix_commits
+            self.stored_cve = crud.bug.create(db_session, bug)
+        return self.stored_cve
 
     @log_wrapper
     def get_fix_commit(self) -> List[str]:

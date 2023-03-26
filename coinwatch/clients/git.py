@@ -33,6 +33,7 @@ class Git:
     def __init__(self, project: str | Project):
         project = project if isinstance(project, Project) else crud.project.get_by_name(db_session, project)
 
+        self.id = project.id
         self.url = project.url
         self.owner = project.author
         self.repo = project.name

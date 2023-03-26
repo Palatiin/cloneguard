@@ -12,6 +12,7 @@ from coinwatch.clients.git import Git
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Extractor
+from coinwatch.src.db.schema import Bug
 from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.searcher import Searcher
 
@@ -30,14 +31,14 @@ class Simian:
     _re_duplicate_block = re.compile(r"Found.*?(?=Found)", flags=re.S)
     _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d*)\s*in\s*(.*?)\n")
 
-    def __init__(self, code: str):
+    def __init__(self, bug: Bug):
         if not os.path.exists(f"{self.simian_jar_path}"):
             logger.error("clients: simian: Simian not found.")
             return
-        self.threshold = code.count("\n") or 1  # threshold must be > 0
+        self.threshold = bug.code.count("\n") or 1  # threshold must be > 0
         self.test_file = f"tmp.simian"
         with open(self.test_file, "w", encoding="UTF-8") as file:
-            file.write(code)
+            file.write(bug.code)
 
         logger.info("clients: detection_methods: Simian ready.")
 
@@ -61,9 +62,9 @@ class Simian:
 
 
 class BlockScope:
-    def __init__(self, patch: str):
-        self.patch_context = Extractor(5).extract(patch=patch)
-        self.patch_code = PatchCode(patch.splitlines()).fetch()
+    def __init__(self, bug: Bug):
+        self.patch_context = Extractor(5).extract(patch=bug.patch)
+        self.patch_code = PatchCode(bug.patch.splitlines()).fetch()
         logger.info("clients: detection_methods: BlockScope ready.")
 
     @log_wrapper

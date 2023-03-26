@@ -1,5 +1,6 @@
 # cli.py
 
+from copy import deepcopy
 from typing import List, Tuple
 
 import click
@@ -55,16 +56,25 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
         logger.info("cli: Run started.")
 
         repo: Git = Git(repo)
-        fix_commits: List[str] = FixCommitFinder(repo, cve=cve).get_fix_commit()
-        logger.info(f"Detected fix commits: {fix_commits}")
-        # patch_code: str = input("Input patch code/clone detection test:\n")
-        patch_code = 'if (block.vtx.empty() || !block.vtx[0]->IsCoinBase())\n         return state.DoS(100, false, REJECT_INVALID, "bad-cb-missing", false, "first tx is not coinbase");\n     for (unsigned int i = 1; i < block.vtx.size(); i++)\n         if (block.vtx[i]->IsCoinBase())\n             return state.DoS(100, false, REJECT_INVALID, "bad-cb-multiple", false, "more than one coinbase");\n \n     // Check transactions\n     for (const auto& tx : block.vtx)\n-        if (!CheckTransaction(*tx, state, false))\n+        if (!CheckTransaction(*tx, state, true))\n             return state.Invalid(false, state.GetRejectCode(), state.GetRejectReason(),\n                                  strprintf("Transaction check failed (tx hash %s) %s", tx->GetHash().ToString(), state.GetDebugMessage()));\n \n     unsigned int nSigOps = 0;\n     for (const auto& tx : block.vtx)\n     {\n         nSigOps += GetLegacySigOpCount(*tx);\n     }\n     if (nSigOps * WITNESS_SCALE_FACTOR > MAX_BLOCK_SIGOPS_COST)\n         return state.DoS(100, false, REJECT_INVALID, "bad-blk-sigops", false, "out-of-bounds SigOpCount");'
-        patch_code = 'qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr)'
+        finder = FixCommitFinder(repo, cve=cve)
+        bug = finder.get_bug()
+        logger.info(f"Detected fix commits: {bug.commits=}")
+
+        if not simian and not bug.patch:
+            # request input
+            # patch: str = input("Input patch code/clone detection test:\n")
+            bug.patch = 'void BitcoinCore::shutdown()\n {\n     try\n     {\n         qDebug() << __func__ << ": Running Shutdown in thread";\n         m_node.appShutdown();\n         qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr),\n     returnValue(0),\n     platformStyle(nullptr)\n {\n     setQuitOnLastWindowClosed(false);'
+            crud.bug.update(db_session, bug)
+        elif simian and not bug.code:
+            # request input
+            # patch: str = input("Input patch code/clone detection test:\n")
+            bug.code = ""
+            crud.bug.update(db_session, bug)
 
         cloned_repos: List[Git] = get_repo_objects(source=repo)
         update_repos(cloned_repos, repo_date)
 
-        detection_method = (Simian if simian else BlockScope)(patch_code)
+        detection_method = (Simian if simian else BlockScope)(bug)
         for clone in cloned_repos:
             detection_result = detection_method.run(clone)
             detection_result = [result for result in detection_result if result[0] is not None]
@@ -73,64 +83,6 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
         logger.info("cli: Run finished.")
 
     return wrapped_run(cve, repo, simian, repo_date)
-
-
-@cli.command()
-@click.argument("cve", required=True, type=str)
-@click.argument("repo", required=False, type=str)
-def legacy_run(cve: str, repo: str):
-    @session_wrapper
-    def wrapped_run(cve: str, repo: str):  # noqa
-        # cve: CVE = CVEClient().cve_id(cve)
-
-        rs = Simian().run(
-            "static GlobalMutex g_warnings_mutex;\nstatic bilingual_str g_misc_warnings GUARDED_BY(g_warnings_mutex);\nstatic bool fLargeWorkInvalidChainFound GUARDED_BY(g_warnings_mutex) = false;",
-            "cpp",
-            "coinwatch/_cache/clones/bitcoin/**/*.cpp",
-        )
-        print(rs)
-
-        repository: Git = Git(repo or "git@github.com:bitcoin/bitcoin.git")
-
-        rb = BlockScope(
-            """
-            #include <warnings.h>
-
-            #include <sync.h>
-            #include <util/string.h>
-            #include <util/system.h>
-            #include <util/translation.h>
-
-            #include <vector>
-
-            + static GlobalMutex g_warnings_mutex;
-            + static bilingual_str g_misc_warnings GUARDED_BY(g_warnings_mutex);
-            + static bool fLargeWorkInvalidChainFound GUARDED_BY(g_warnings_mutex) = false;
-
-            void SetMiscWarning(const bilingual_str& warning)
-            {
-                LOCK(g_warnings_mutex);
-                g_misc_warnings = warning;
-            }
-
-            void SetfLargeWorkInvalidChainFound(bool flag)
-            {
-                LOCK(g_warnings_mutex);
-                fLargeWorkInvalidChainFound = flag;
-            }
-        """
-        ).run(repository)
-        print(rb)
-
-        finder = FixCommitFinder(repository, cve, cache=False)
-        fix_commits = finder.get_fix_commit()
-        logger.info(f"{fix_commits=}")
-
-        szz = SZZ(repository, fix_commits)
-        # fix_big_commit_pairs = szz.run()
-        pass
-
-    return wrapped_run(cve, repo)
 
 
 @cli.command()
