@@ -30,7 +30,7 @@ class Comparator:
 
     @classmethod
     def compare(cls, source: List[str], target: List[str]) -> float:
-        p: float = float(len(source))
+        p: float = float(len(source) if len(source) > len(target) else len(target))
 
         similarity_sum: float = 0.0
         for i, source_code in enumerate(source):

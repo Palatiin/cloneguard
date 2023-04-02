@@ -163,13 +163,15 @@ class Searcher:
         candidate_code_list: List[List[str]] = []
 
         for candidate in candidates:
-            file = self.repo.open_file(candidate.key_statements[0].filename)
+            filename = candidate.key_statements[0].filename
+            file_ext = filename.split(".")[-1]
+            file = self.repo.open_file(filename)
             start_line = candidate.upper_code[candidate.boundary[0][1][1]][0] + 1
             end_line = candidate.lower_code[candidate.boundary[1][0][1]][0]
             candidate_code: List[str] = []
             for line in file[start_line:end_line]:
                 line = line.strip()
-                if Filter.line(line):
+                if Filter.line(line, filename, file_ext):
                     continue
                 candidate_code.append(line)
             if candidate_code:

@@ -39,7 +39,7 @@ Ideas:
 import datetime as dt
 import json
 import re
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import nltk
 import structlog
@@ -68,6 +68,8 @@ class FixCommitFinder:
         "default",
     ]
 
+    IGNORED_COMMITS = ["test", "ci"]
+
     _res = {
         "release_notes": {
             "change_log_1": re.compile(r"#(\d+)\s*`(\w+)`\s*(.*)"),
@@ -76,6 +78,7 @@ class FixCommitFinder:
             "keyword": re.compile(r"fix|\bbug|CVE-\d+|CWE-\d+", flags=re.IGNORECASE),
             "issue": re.compile(r"issue\s*#(\d+)\b"),
         },
+        "commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
     }
 
     _keyword_count = 10
@@ -102,13 +105,13 @@ class FixCommitFinder:
         self.pull = [ref for ref in self.cve.references if ref.type_ == ReferenceType.pull]
         self.release_notes = [ref for ref in self.cve.references if ref.type_ == ReferenceType.release_notes]
         self.repo = repo
-        self.cve_keywords: List[str] = self._extract_keywords(self.cve.descriptions["en"][0])
+        self.cve_keywords: Set[str] = self._extract_keywords(self.cve.descriptions["en"][0])
 
-    def _extract_keywords(self, text: str, lang: str = "english") -> List[str]:
+    def _extract_keywords(self, text: str, lang: str = "english") -> Set[str]:
         kwords = nltk.word_tokenize(text, language=lang)
         kwords = nltk.pos_tag(kwords)
         kwords = [x for x in kwords if x[1][:2] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower()]
-        return [kw[0] for kw in kwords]
+        return set([kw[0] for kw in kwords])
 
     def get_bug(self) -> Bug | None:
         if not self.stored_cve:
@@ -121,12 +124,19 @@ class FixCommitFinder:
         return self.stored_cve
 
     def scan_recent(self):
+        def ignore_commit(_commit):
+            _commit = _commit.split("\n\n")
+            if match := self._res["commit"].match(_commit[1].strip()):
+                if match.group(1) in self.IGNORED_COMMITS:
+                    return True
+            return False
+
         time_window = dt.datetime.now() - dt.timedelta(days=3)  # TODO: just tmp 3 days
         recent_commits = self.repo.rev_list(after=time_window.strftime("%Y-%m-%d"))
 
         candidates = []
         for _hash, commit in recent_commits:
-            if keyword := self._res["default"]["keyword"].search(commit):
+            if (keyword := self._res["default"]["keyword"].search(commit)) and not ignore_commit(commit):
                 keyword = keyword.group(0)
                 logger.info(f"scan_recent: Matched {keyword=}.")
                 candidates.append(_hash)
@@ -208,12 +218,10 @@ class FixCommitFinder:
 
         # sort by information value
         change_log = sorted(change_log, key=lambda x: x[3], reverse=True)
-        _change_log = list(filter(lambda x: x[3] > 0, change_log))
-        change_log = _change_log or change_log
+        # _change_log = list(filter(lambda x: x[3] > 0, change_log))
+        # change_log = _change_log or change_log
 
-        commits = []
-        for log in change_log:
-            commits.extend(log[4])
+        commits = [commit["sha"] for log in change_log for commit in log[4]]
 
         return commits  # self._select_commit(change_log[0][4])
 
@@ -237,7 +245,7 @@ class FixCommitFinder:
 
         commits = sorted(candidate_commits["commits"], key=lambda x: x[1], reverse=True)
         # TODO: if 'Merge' in commit, pull scan?
-        return commits  # commits[0][0]
+        return [commit[0] for commit in commits]
 
     @staticmethod
     def check_db(cve: str):
