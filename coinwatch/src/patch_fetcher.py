@@ -21,15 +21,16 @@ class PatchCode:
     code_deletions: List[str] = []
     code_additions: List[str] = []
 
-    def __init__(self, patch: List[str]):
-        self.patch = patch
+    def __init__(self, patch: str | List[str]):
+        self.patch: List[str] = patch.splitlines() if isinstance(patch, str) else patch
 
     def fetch(self):
         """Fetch code from patch."""
         additions, deletions = 0, 0
         for line in self.patch:
             line = line.strip()
-            if Filter.line(line):
+            _line = line[1:].strip() if line.startswith("-") or line.startswith("+") else line
+            if Filter.line(_line):
                 continue
             if line.startswith("-"):
                 deletions += 1

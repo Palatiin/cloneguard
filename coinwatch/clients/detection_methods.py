@@ -31,7 +31,7 @@ class Simian:
     _re_duplicate_block = re.compile(r"Found.*?(?=Found)", flags=re.S)
     _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d*)\s*in\s*(.*?)\n")
 
-    def __init__(self, bug: Bug):
+    def __init__(self, source: Git, bug: Bug):
         if not os.path.exists(f"{self.simian_jar_path}"):
             logger.error("clients: simian: Simian not found.")
             return
@@ -62,12 +62,41 @@ class Simian:
 
 
 class BlockScope:
-    def __init__(self, bug: Bug):
-        self.patch_context = Extractor(5).extract(patch=bug.patch)
-        self.patch_code = PatchCode(bug.patch.splitlines()).fetch()
+    def __init__(self, source: Git, bug: Bug):
+        """Initialize detection method BlockScope.
+
+        Args:
+            source (Git): Repository, where the bug was discovered
+            bug (Bug): The discovered bug
+        """
+        self.patches = [bug.patch] if bug.patch else Extractor(5).get_patch_from_commit(source, bug.commits[0])
+        self.patch_contexts = [Extractor(5).extract(patch=patch) for patch in self.patches]
+        self.patch_codes = [PatchCode(patch).fetch() for patch in self.patches]
         logger.info("clients: detection_methods: BlockScope ready.")
 
     @log_wrapper
-    def run(self, repo: Git):
-        search_result = Searcher(self.patch_context, repo).search()
-        return [Comparator.determine_patch_application(self.patch_code, candidate) for candidate in search_result]
+    def run(self, repo: Git) -> list:
+        """Run the detection method.
+
+        Args:
+            repo (Git): Cloned repository, which will be analysed
+
+        Returns:
+            Detection results.
+        """
+        patch_applications: list = []
+
+        i: int = 0
+        for context, code in zip(self.patch_contexts, self.patch_codes):
+            i += 1
+            search_result = Searcher(context, repo).search()
+            applications = [Comparator.determine_patch_application(code, candidate) for candidate in search_result]
+            applications = [application for application in applications if application[0] is not None]
+            logger.info(f"Patch part application statuses: {applications}")
+            if not applications:
+                patch_applications.append(())
+                continue
+            # select the one with the highest similarity
+            patch_applications.append(max(applications, key=lambda x: x[1]))
+
+        return patch_applications

@@ -13,9 +13,9 @@ from coinwatch.src.schemas import *
 
 __all__ = ["load_references"]
 
-_re_issue = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/issues/(\d+)")
-_re_pull = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/pull/(\d+)")
-_re_release_notes = re.compile(r"https?://(?:www\.)?github\.com/bitcoin/bitcoin/blob/(.*?)/doc/release-notes\.md")
+_re_issue = r"https?://(?:www\.)?github\.com/{author}/{project}/issues/(\d+)"
+_re_pull = r"https?://(?:www\.)?github\.com/{author}/{project}/pull/(\d+)"
+_re_release_notes = r"https?://(?:www\.)?github\.com/{author}/{project}/blob/(.*?)/doc/release-notes\.md"
 
 
 logger = structlog.get_logger(__name__)
@@ -31,15 +31,15 @@ def load_references(repo: Git, references: List[Reference]) -> NoReturn:
     }
 
     for reference in references:
-        if match := _re_issue.match(reference.url):
+        if match := re.match(_re_issue.format(author=repo.owner, project=repo.repo), reference.url):
             logger.info("cve_reader: load_refernces: Reference to issue matched.")
             reference.json = repo.api.get_issue(repo.owner, repo.repo, int(match.group(1)))
             reference.type_ = ReferenceType.issue
-        elif match := _re_pull.match(reference.url):
+        elif match := re.match(_re_pull.format(author=repo.owner, project=repo.repo), reference.url):
             logger.info("cve_reader: load_refernces: Reference to pull request matched.")
             reference.json = repo.api.get_pull(repo.owner, repo.repo, int(match.group(1)))
             reference.type_ = ReferenceType.pull
-        elif match := _re_release_notes.match(reference.url):
+        elif match := re.match(_re_release_notes.format(author=repo.owner, project=repo.repo), reference.url):
             logger.info("cve_reader: load_references: Reference to release notes matched.")
             version = match.group(1)
             reference.body = repo.api.get_file(

@@ -11,6 +11,7 @@ class Filter(object):
         "py": r'\s*(#|""").*?{}',
         "c": r"\s*(/\*|//|/\*\*).*?{}",
         "cpp": r"\s*(/\*|//|/\*\*).*?{}",
+        "go": r"\s*(//|/\*).*?{}",
     }
     _re_brackets = re.compile(r"\s*[\[\](){}]\s*;?")
 
@@ -24,7 +25,8 @@ class Filter(object):
         )
 
     @classmethod
-    def file(cls, filename: str, file_ext: str) -> bool:
+    def file(cls, filename: str, file_ext: str = None) -> bool:
+        file_ext = file_ext or filename.split(".")[-1]
         return cls._in_test(filename) | bool(file_ext not in cls._re_lang_comment.keys())
 
     @staticmethod

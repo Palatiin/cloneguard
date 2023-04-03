@@ -4,7 +4,9 @@ import re
 from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
+from coinwatch.clients.git import Git
 from coinwatch.src.common import Filter, log_wrapper
+from coinwatch.src.szz.git_parser import GitParser
 
 
 @dataclass
@@ -35,7 +37,7 @@ class Extractor:
         return self._re_token.findall(line)
 
     @log_wrapper
-    def extract(self, patch: str) -> Tuple[Context, Context]:
+    def extract(self, patch: str | List[str]) -> Tuple[Context, Context]:
         """Extract Upper and Lower patch context.
 
         Args:
@@ -44,22 +46,18 @@ class Extractor:
         Returns:
             Tuple with Upper and Lower context - keywords representing leading and trailing code context.
         """
-        patch_lines: List[str] = patch.split("\n")
-        patch_lines = list(filter(lambda x: x, patch_lines))
-
+        patch_lines: List[str] = patch.splitlines() if isinstance(patch, str) else patch
         context: Tuple[Context, Context] = Context(), Context()
 
         is_lower = int(False)
         for line in patch_lines:
             line = line.strip()
-            if not line or (len(line) == 1 and line[0] in ("+", "-")):
-                # skip empty lines
-                continue
             if line[0] in ("+", "-"):
                 # skip patch lines
                 is_lower = int(True)
                 continue
-            if Filter.line(line):
+            _line = line[1:].strip() if line.startswith("-") or line.startswith("+") else line
+            if Filter.line(_line):
                 continue
 
             # tokenize context lines
@@ -80,3 +78,23 @@ class Extractor:
             context[1].is_eof = True
 
         return context
+
+    @staticmethod
+    def get_patch_from_commit(repo: Git, commit: str) -> List[List[str]]:
+        diff = repo.show(commit, quiet=False, context=10)
+        parsed_diff = GitParser().parse_diff(diff)
+
+        relevant_files = [file for file in parsed_diff["affected_files"] if not Filter.file(filename=file)]
+        patch_list = []
+        for file in relevant_files:
+            for block in parsed_diff[file]:
+                patch: List[str] = []
+                for line in block["diff_lines"]:
+                    line = line.strip()
+                    _line = line[1:].strip() if line.startswith("-") or line.startswith("+") else line
+                    if Filter.line(_line, filename=file):
+                        continue
+                    patch.append(line)
+                patch_list.append(patch)
+
+        return patch_list

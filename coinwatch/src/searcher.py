@@ -42,12 +42,15 @@ class Searcher:
         for line in grep_output:
             if not line:
                 continue
-            file, line_number, sentence = line.split(":", 2)
+            try:
+                file, line_number, sentence = line.split(":", 2)
+            except Exception as e:
+                print(str(e))
             sentence = sentence.strip()
             file_extension = file.split(".")[-1]
             if Filter.file(filename=file, file_ext=file_extension):
                 continue
-            if Filter.line(line, filename=file, file_ext=file_extension, keyword=keyword):
+            if Filter.line(sentence, filename=file, file_ext=file_extension, keyword=keyword):
                 continue
             if (sim := Comparator.similarity(sentence, key_sentence)) <= self._levenshtein_threshold:
                 continue  # filter based on similarity

@@ -114,13 +114,18 @@ class FixCommitFinder:
         return set([kw[0] for kw in kwords])
 
     def get_bug(self) -> Bug | None:
+        fix_commits = self.get_fix_commit()
+        if not fix_commits:
+            return None
+
         if not self.stored_cve:
-            fix_commits = self.get_fix_commit()
-            if not fix_commits:
-                return None
             bug = Bug(cve_id=self.cve.id_ if self.cve else "SCAN", project=self.repo.id)
             bug.commits = fix_commits
             self.stored_cve = crud.bug.create(db_session, bug)
+        elif not self.stored_cve.commits:
+            self.stored_cve.commits = fix_commits
+            crud.bug.update(db_session, self.stored_cve)
+
         return self.stored_cve
 
     def scan_recent(self):
@@ -146,7 +151,8 @@ class FixCommitFinder:
     @log_wrapper
     def get_fix_commit(self) -> List[str]:
         if self.stored_cve:
-            return json.loads(self.stored_cve.fix_commit)
+            if self.stored_cve.commits:
+                return self.stored_cve.commits
         if not self.cve:
             return self.scan_recent()
 

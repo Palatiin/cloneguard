@@ -60,7 +60,13 @@ class CRUDProject(CRUDBase[Project]):
 
 
 class CRUDDetection(CRUDBase[Detection]):
-    ...
+    def create(self, db: Session, obj: ModelType) -> ModelType:
+        if _obj := self.get_by_bug_and_project_id(db, obj.bug, obj.project):
+            return _obj
+        return super().create(db, obj)
+
+    def get_by_bug_and_project_id(self, db: Session, bug_id: int, project_id: int):
+        return db.query(self.model).filter_by(bug=bug_id, project=project_id).first()
 
 
 bug = CRUDBug(Bug)

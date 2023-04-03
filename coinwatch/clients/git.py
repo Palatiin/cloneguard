@@ -91,8 +91,11 @@ class Git:
         for _hash in hashes:
             yield _hash, self.show(_hash, quiet=True)
 
-    def show(self, _hash: str, quiet: Optional[bool] = True) -> str:
-        command = ["git", "show", "--quiet" if quiet else "", "--date=iso", _hash]
+    def show(self, _hash: str, quiet: Optional[bool] = True, context: int = 0) -> str:
+        command = ["git", "show", "--date=iso"]
+        command += ["--quiet"] if quiet else []
+        command += [f"-U{context}"] if context else []
+        command += [_hash]
         logger.info("git: show: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         return process.stdout.decode(errors="replace")

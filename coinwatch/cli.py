@@ -63,21 +63,22 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
         if not simian and not bug.patch:
             # request input
             # patch: str = input("Input patch code/clone detection test:\n")
-            bug.patch = 'void BitcoinCore::shutdown()\n {\n     try\n     {\n         qDebug() << __func__ << ": Running Shutdown in thread";\n         m_node.appShutdown();\n         qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr),\n     returnValue(0),\n     platformStyle(nullptr)\n {\n     setQuitOnLastWindowClosed(false);'
-            crud.bug.update(db_session, bug)
+            # bug.patch = 'void BitcoinCore::shutdown()\n {\n     try\n     {\n         qDebug() << __func__ << ": Running Shutdown in thread";\n         m_node.appShutdown();\n         qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr),\n     returnValue(0),\n     platformStyle(nullptr)\n {\n     setQuitOnLastWindowClosed(false);'
+            # crud.bug.update(db_session, bug)
+            ...
         elif simian and not bug.code:
             # request input
             # patch: str = input("Input patch code/clone detection test:\n")
-            bug.code = ""
-            crud.bug.update(db_session, bug)
+            # bug.code = ""
+            # crud.bug.update(db_session, bug)
+            ...
 
         cloned_repos: List[Git] = get_repo_objects(source=repo)
         update_repos(cloned_repos, repo_date)
 
-        detection_method = (Simian if simian else BlockScope)(bug)
+        detection_method = (Simian if simian else BlockScope)(repo, bug)
         for clone in cloned_repos:
             detection_result = detection_method.run(clone)
-            detection_result = [result for result in detection_result if result[0] is not None]
             logger.info(f"{detection_result=}", repo=clone.repo)
 
         logger.info("cli: Run finished.")
