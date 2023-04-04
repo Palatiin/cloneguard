@@ -15,7 +15,7 @@ class Filter(object):
         "cpp": r"\s*(/\*|//|/\*\*).*?{}",
         "go": r"\s*(//|/\*).*?{}",
     }
-    _re_brackets = re.compile(r"\s*[\[\](){}]\s*;?")
+    _re_brackets = re.compile(r"\s*[\[\](){}]+\s*(?:;\s*)?$")
 
     @classmethod
     def line(cls, line: str, filename: str = "", file_ext: str = "", keyword: str = "") -> bool:

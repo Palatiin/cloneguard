@@ -181,7 +181,7 @@ class Searcher:
             return True
         return False
 
-    def _get_candidate_code_list(self, candidates: List[TargetContext]) -> List[List[str]]:
+    def _get_candidate_code_list(self, candidates: List[TargetContext], patch_lenght: int) -> List[List[str]]:
         candidate_code_list: List[List[str]] = []
 
         for candidate in candidates:
@@ -191,18 +191,22 @@ class Searcher:
             start_line = candidate.upper_code[candidate.boundary[0][1][1]][0] + 1
             end_line = candidate.lower_code[candidate.boundary[1][0][1]][0]
             candidate_code: List[str] = []
+            line_count: int = 0
             for line in file[start_line:end_line]:
                 line = line.strip()
                 if Filter.line(line, filename, file_ext):
                     continue
+                line_count += 1
+                if line_count > patch_lenght * 5:
+                    break
                 candidate_code.append(line)
-            if candidate_code:
+            if candidate_code and line_count < patch_lenght * 5:
                 candidate_code_list.append(candidate_code)
 
         return candidate_code_list
 
     @log_wrapper
-    def search(self) -> List[List[str]]:
+    def search(self, patch_length: int) -> List[List[str]]:
         """Find and return candidate codes in target repository."""
         context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
@@ -264,4 +268,4 @@ class Searcher:
                 continue
             candidate_context_list.append(candidate_context)
 
-        return self._get_candidate_code_list(candidate_context_list)
+        return self._get_candidate_code_list(candidate_context_list, patch_length)

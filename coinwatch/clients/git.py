@@ -125,15 +125,20 @@ class Git:
             lines = file.readlines()
         return lines
 
+    def checkout(self, branch: str = "master"):
+        command = ["git", "checkout", branch]
+        logger.info("git: checkout: Command: " + " ".join(command), repo=self.repo)
+        subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
     def sync(self) -> NoReturn:
         """Sync with remote repository."""
-        command = ["git", "checkout", "master"]
-        logger.info("git: sync: Command: " + " ".join(command), repo=self.repo)
-        subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        self.checkout()
 
         command = ["git", "pull"]
         logger.info("git: sync Command: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
+        self.checkout()  # digibyte automatically switches to branch `develop`
 
     def get_version_from_date(self, date: str) -> NoReturn:
         rev_list = self.rev_list(before=date)

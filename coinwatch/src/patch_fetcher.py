@@ -14,15 +14,14 @@ class PatchType(int, Enum):
 
 
 class PatchCode:
-    deletions: int = 0
-    additions: int = 0
-    type: PatchType = PatchType.NDF
-    code: List[str] = []
-    code_deletions: List[str] = []
-    code_additions: List[str] = []
-
     def __init__(self, patch: str | List[str]):
         self.patch: List[str] = patch.splitlines() if isinstance(patch, str) else patch
+        self.deletions: int = 0
+        self.additions: int = 0
+        self.type: PatchType = PatchType.NDF
+        self.code: List[str] = []
+        self.code_deletions: List[str] = []
+        self.code_additions: List[str] = []
 
     def fetch(self):
         """Fetch code from patch."""

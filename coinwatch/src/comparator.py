@@ -30,7 +30,7 @@ class Comparator:
 
     @classmethod
     def compare(cls, source: List[str], target: List[str]) -> float:
-        p: float = float(len(source) if len(source) > len(target) else len(target))
+        p: float = float(len(source))
 
         similarity_sum: float = 0.0
         with multiprocessing.Pool() as pool:

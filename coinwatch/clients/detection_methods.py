@@ -69,9 +69,9 @@ class BlockScope:
             source (Git): Repository, where the bug was discovered
             bug (Bug): The discovered bug
         """
-        self.patches = [bug.patch] if bug.patch else Extractor(5).get_patch_from_commit(source, bug.commits[0])
-        self.patch_contexts = [Extractor(5).extract(patch=patch) for patch in self.patches]
-        self.patch_codes = [PatchCode(patch).fetch() for patch in self.patches]
+        patches = [bug.patch] if bug.patch else Extractor(5).get_patch_from_commit(source, bug.commits[0])
+        self.patch_contexts = [Extractor(5).extract(patch=patch) for patch in patches]
+        self.patch_codes = [PatchCode(patch).fetch() for patch in patches]
         logger.info("clients: detection_methods: BlockScope ready.")
 
     @log_wrapper
@@ -89,7 +89,7 @@ class BlockScope:
         i: int = 0
         for context, code in zip(self.patch_contexts, self.patch_codes):
             i += 1
-            search_result = Searcher(context, repo).search()
+            search_result = Searcher(context, repo).search(len(code.code))
             applications = [Comparator.determine_patch_application(code, candidate) for candidate in search_result]
             applications = [application for application in applications if application[0] is not None]
             logger.info(f"Patch part application statuses: {applications}")

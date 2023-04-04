@@ -27,7 +27,8 @@ logger = structlog.get_logger(__name__)
 def session_wrapper(func):
     def inner_wrapper(*args, **kwargs):
         with DBSession():
-            func(*args, **kwargs)
+            result = func(*args, **kwargs)
+        return result
 
     return inner_wrapper
 
@@ -76,9 +77,12 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
         cloned_repos: List[Git] = get_repo_objects(source=repo)
         update_repos(cloned_repos, repo_date)
 
-        detection_method = (Simian if simian else BlockScope)(repo, bug)
         for clone in cloned_repos:
+            # reinitialization of the detection method improves performance
+            # otherwise the code would get stuck in detection_method.run
+            detection_method = (Simian if simian else BlockScope)(repo, bug)
             detection_result = detection_method.run(clone)
+            del detection_method
             logger.info(f"{detection_result=}", repo=clone.repo)
 
         logger.info("cli: Run finished.")
@@ -185,6 +189,27 @@ def test():
             logger.info("Passed.")
         else:
             logger.error(f"Failed. {test_result}")
+
+
+@cli.command()
+def test_blockscope():
+    @session_wrapper
+    def run_test(source, bug, date, target):
+        repo = Git(source)
+        bug = FixCommitFinder(repo, bug, cache=True).get_bug()
+        bs = BlockScope(repo, bug)
+        target = Git(target)
+        update_repos([target], date)
+        result = bs.run(target)
+        return result
+
+    from coinwatch.tests.test_blockscope import test_cases
+
+    logger.info("================ Test BS ================")
+    for repo, bug, target, date, expected_result in test_cases:
+        result = run_test(repo, bug, date, target)
+        assert result[0][0] == expected_result[0][0], "FAILED"
+        print("Passed")
 
 
 if __name__ == "__main__":
