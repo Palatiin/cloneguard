@@ -1,5 +1,5 @@
 # comparator.py
-
+import multiprocessing
 from enum import Enum
 from typing import List
 
@@ -33,12 +33,14 @@ class Comparator:
         p: float = float(len(source) if len(source) > len(target) else len(target))
 
         similarity_sum: float = 0.0
-        for i, source_code in enumerate(source):
-            similarities: List[float] = []
-            for target_code in target:
-                similarities.append(cls.similarity(source_code, target_code))
-            most_similar_index, value = max(enumerate(similarities), key=lambda x: x[1])
-            similarity_sum += value * cls._reward ** (abs(i - most_similar_index))
+        with multiprocessing.Pool() as pool:
+            similarities = pool.starmap(
+                cls.similarity, [(source_code, target_code) for source_code in source for target_code in target]
+            )
+            similarities = [similarities[i : i + len(target)] for i in range(0, len(similarities), len(target))]
+            for i, source_code in enumerate(source):
+                most_similar_index, value = max(enumerate(similarities[i]), key=lambda x: x[1])
+                similarity_sum += value * cls._reward ** (abs(i - most_similar_index))
 
         return similarity_sum / p
 

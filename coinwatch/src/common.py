@@ -2,11 +2,13 @@
 
 import os
 import re
+from pathlib import Path
 
 import structlog
 
 
 class Filter(object):
+    extensions = {"py", "c", "cpp", "go"}
     _re_lang_comment = {
         "py": r'\s*(#|""").*?{}',
         "c": r"\s*(/\*|//|/\*\*).*?{}",
@@ -26,8 +28,8 @@ class Filter(object):
 
     @classmethod
     def file(cls, filename: str, file_ext: str = None) -> bool:
-        file_ext = file_ext or filename.split(".")[-1]
-        return cls._in_test(filename) | bool(file_ext not in cls._re_lang_comment.keys())
+        file_ext = file_ext or Path(filename).suffix[1:]
+        return cls._in_test(filename) | bool(file_ext not in cls.extensions)
 
     @staticmethod
     def _in_test(filename: str) -> bool:

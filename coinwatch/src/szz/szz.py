@@ -1,6 +1,7 @@
 # szz.py
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict, Generator, List
 
 import structlog
@@ -68,7 +69,7 @@ class SZZ:
         """
         annotated_files: Dict[str, List[Node]] = {}
         for filename in commit_diff["affected_files"]:
-            if Filter.file(filename, file_ext=filename.split(".")[-1]):
+            if Filter.file(filename, file_ext=Path(filename).suffix[1:]):
                 continue
             file_diff = commit_diff[filename]
             annotated_files[filename] = self.annotate_lines(commit, filename, file_diff)

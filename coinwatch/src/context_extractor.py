@@ -2,6 +2,7 @@
 
 import re
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import List, Optional, Tuple
 
 from coinwatch.clients.git import Git
@@ -52,6 +53,8 @@ class Extractor:
         is_lower = int(False)
         for line in patch_lines:
             line = line.strip()
+            if not line:
+                continue
             if line[0] in ("+", "-"):
                 # skip patch lines
                 is_lower = int(True)
@@ -87,12 +90,13 @@ class Extractor:
         relevant_files = [file for file in parsed_diff["affected_files"] if not Filter.file(filename=file)]
         patch_list = []
         for file in relevant_files:
-            for block in parsed_diff[file]:
+            file_ext = Path(file).suffix[1:]
+            for block in parsed_diff[file]["affected_lines"]:
                 patch: List[str] = []
                 for line in block["diff_lines"]:
                     line = line.strip()
                     _line = line[1:].strip() if line.startswith("-") or line.startswith("+") else line
-                    if Filter.line(_line, filename=file):
+                    if Filter.line(_line, filename=file, file_ext=file_ext):
                         continue
                     patch.append(line)
                 patch_list.append(patch)
