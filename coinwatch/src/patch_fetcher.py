@@ -33,12 +33,12 @@ class PatchCode:
                 continue
             if line.startswith("-"):
                 deletions += 1
-                self.code_deletions.append(line[1:].strip())
-                self.code.append(line[1:].strip())
+                self.code_deletions.append(_line)
+                self.code.append(_line)
             elif line.startswith("+"):
                 additions += 1
-                self.code_additions.append(line[1:].strip())
-                self.code.append(line[1:].strip())
+                self.code_additions.append(_line)
+                self.code.append(_line)
 
         patch_type: PatchType = PatchType.NDF
         if deletions and not additions:
