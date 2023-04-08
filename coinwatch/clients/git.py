@@ -114,7 +114,7 @@ class Git:
         return process.stdout.decode(errors="replace").splitlines()
 
     def grep(self, pattern: str, files: str) -> Generator:
-        command = ["git", "grep", "-n", pattern, "--", files]
+        command = ["git", "grep", "-n", f"\\b{pattern}\\b", "--", files]
         logger.info("git: grep: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         for occurrence in process.stdout.decode(errors="replace").splitlines():
