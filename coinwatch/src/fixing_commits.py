@@ -101,11 +101,22 @@ class FixCommitFinder:
 
         self.cve: CVE = CVEClient().cve_id(cve)
         load_references(repo, self.cve.references)
-        self.issue = [ref for ref in self.cve.references if ref.type_ == ReferenceType.issue]
-        self.pull = [ref for ref in self.cve.references if ref.type_ == ReferenceType.pull]
-        self.release_notes = [ref for ref in self.cve.references if ref.type_ == ReferenceType.release_notes]
+        self.commit, self.issue, self.pull, self.release_notes = [], [], [], []
+        self._categorize_references()
         self.repo = repo
         self.cve_keywords: Set[str] = self._extract_keywords(self.cve.descriptions["en"][0])
+
+    def _categorize_references(self):
+        for ref in self.cve.references:
+            match ref.type_:
+                case ReferenceType.commit:
+                    self.commit.append(ref)
+                case ReferenceType.issue:
+                    self.issue.append(ref)
+                case ReferenceType.pull:
+                    self.pull.append(ref)
+                case ReferenceType.release_notes:
+                    self.release_notes.append(ref)
 
     def _extract_keywords(self, text: str, lang: str = "english") -> Set[str]:
         kwords = nltk.word_tokenize(text, language=lang)
@@ -157,6 +168,9 @@ class FixCommitFinder:
             return self.scan_recent()
 
         fix_commits = []
+
+        if self.commit:
+            return [self.commit[0].json["id"]]
 
         # ISSUE SCAN
         if self.issue:
