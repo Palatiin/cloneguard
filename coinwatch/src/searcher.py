@@ -73,7 +73,7 @@ class Searcher:
             for lower_occurrence, _ in occurrences[1][lower_ksi]:
                 if (
                     upper_occurrence.filename == lower_occurrence.filename
-                    and upper_occurrence.line_number < lower_occurrence.line_number - 1
+                    and upper_occurrence.line_number < lower_occurrence.line_number
                 ):
                     ks_pairs.append((upper_occurrence, lower_occurrence))
 
@@ -85,8 +85,8 @@ class Searcher:
         line_range = []
 
         # context before key statement
-        curr_lnum = occurrence.line_number - 1
-        for line in file_lines[curr_lnum - 1 :: -1]:
+        curr_lnum = occurrence.line_number
+        for line in file_lines[curr_lnum - 2 :: -1]:
             curr_lnum -= 1
             if len(line_range) == ks_i:
                 break
@@ -96,11 +96,11 @@ class Searcher:
             line_range.append((curr_lnum, line))
 
         # key statement
-        line_range.append((occurrence.line_number - 1, file_lines[occurrence.line_number - 1].strip()))
+        line_range.append((occurrence.line_number, file_lines[occurrence.line_number - 1].strip()))
 
         # context after key statement
-        curr_lnum = occurrence.line_number - 1
-        for line in file_lines[curr_lnum + 1 :]:
+        curr_lnum = occurrence.line_number
+        for line in file_lines[curr_lnum:]:
             curr_lnum += 1
             if len(line_range) == CONTEXT_LINES:
                 break
@@ -173,8 +173,8 @@ class Searcher:
             filename = candidate.key_statements[0].filename
             file_ext = Path(filename).suffix[1:]
             file = self.repo.open_file(filename)
-            start_line = candidate.upper_code[candidate.boundary[0][1][1]][0] + 1
-            end_line = candidate.lower_code[candidate.boundary[1][0][1]][0]
+            start_line = candidate.upper_code[candidate.boundary[0][1][1]][0]
+            end_line = candidate.lower_code[candidate.boundary[1][0][1]][0] - 1
             candidate_code: List[str] = []
             line_count: int = 0
             for line in file[start_line:end_line]:
@@ -224,6 +224,7 @@ class Searcher:
         upper_ksi: int = key_statement_pos[0][0]
         lower_ksi: int = key_statement_pos[1][0]
         candidate_context_ks_pairs = self.make_candidate_context_ks_pairs(upper_ksi, lower_ksi, context_kw_occurrences)
+        del context_kw_occurrences
 
         # create list of candidate contexts
         candidate_context_list: List[TargetContext] = []
