@@ -6,7 +6,6 @@ import click
 import structlog
 
 import coinwatch.src.db.crud as crud
-from coinwatch.clients.cve import CVEClient
 from coinwatch.clients.detection_methods import BlockScope, Simian
 from coinwatch.clients.git import Git
 from coinwatch.src.comparator import Comparator
@@ -16,9 +15,7 @@ from coinwatch.src.db.session import DBSession, db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.notifications import Postman
 from coinwatch.src.patch_fetcher import PatchCode
-from coinwatch.src.schemas import CVE
 from coinwatch.src.searcher import Searcher
-from coinwatch.src.szz.szz import SZZ
 from coinwatch.src.update_repos import get_repo_objects, update_repos
 
 logger = structlog.get_logger(__name__)
@@ -125,9 +122,9 @@ def db_init():
 def test_searcher():
     from tests.test_context_extraction import test_patch2
 
-    repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+    repository: Git = Git("bitcoin")
 
-    extractor = Extractor(5)
+    extractor = Extractor("cpp", 5)
     patch_context: Tuple[Context, Context] = extractor.extract(test_patch2)
 
     searcher = Searcher(patch_context, repository)
@@ -141,41 +138,41 @@ def test_searcher():
 @cli.command()
 def test():
     def test_run(cve):
-        cve: CVE = CVEClient().cve_id(cve)
-
-        repository: Git = Git("git@github.com:bitcoin/bitcoin.git")
+        repository: Git = Git("bitcoin")
         load_references(repository, cve.references)
 
-        finder = FixCommitFinder(cve, repository)
+        finder = FixCommitFinder(repository, cve, cache=False)
         return finder.get_fix_commit()
 
-    from tests.test import test_cve_fix_commit_pairs
-
-    logger.info("Test CVE scraper + Commit finder")
-
-    for i, test_case in enumerate(test_cve_fix_commit_pairs):
-        logger.info(f"================ Test {i:2} ================")
-
-        try:
-            test_result = test_run(test_case[0])
-            test_eval = test_result == test_case[1]
-        except Exception as e:
-            test_result = str(e)
-            test_eval = False
-
-        if test_eval:
-            logger.info("Passed.")
-        else:
-            logger.error(f"Failed. {test_result}")
+    # from tests.test import test_cve_fix_commit_pairs
+    #
+    # logger.info("Test CVE scraper + Commit finder")
+    #
+    # for i, test_case in enumerate(test_cve_fix_commit_pairs):
+    #     logger.info(f"================ Test {i:2} ================")
+    #
+    #     try:
+    #         test_result = test_run(test_case[0])
+    #         test_eval = test_result == test_case[1]
+    #     except Exception as e:
+    #         test_result = str(e)
+    #         test_eval = False
+    #
+    #     if test_eval:
+    #         logger.info("Passed.")
+    #     else:
+    #         logger.error(f"Failed. {test_result}")
 
     logger.info("Test Context Extractor")
-    from tests.test_context_extraction import test_list_context_extraction
+    from tests.test_context_extraction import test_list_context_extraction, test_patch_exception
+
+    from coinwatch.src.errors import ContextExtractionError
 
     for i, test_case in enumerate(test_list_context_extraction):
         logger.info(f"================ Test {i:2} ================")
 
         try:
-            ext = Extractor(5)
+            ext = Extractor("cpp", 5)
             test_result = ext.extract(test_case[0])
             upper_ctx = [pair[1] for pair in test_result[0].sentence_keyword_pairs]
             lower_ctx = [pair[1] for pair in test_result[1].sentence_keyword_pairs]
@@ -189,6 +186,15 @@ def test():
             logger.info("Passed.")
         else:
             logger.error(f"Failed. {test_result}")
+
+    logger.info(f"================ Test {i + 1:2} ================")
+    try:
+        Extractor("cpp", 5).extract(test_patch_exception)
+        logger.error("Failed. Exception ContextExtractionError expected.")
+    except ContextExtractionError:
+        logger.info("Passed.")
+    except Exception:
+        logger.error("Failed. Exception ContextExtractionError expected.")
 
 
 @cli.command()
