@@ -9,6 +9,7 @@ from typing import List
 import structlog
 
 from coinwatch.clients.git import Git
+from coinwatch.settings import CONTEXT_LINES
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Extractor
@@ -69,8 +70,9 @@ class BlockScope:
             source (Git): Repository, where the bug was discovered
             bug (Bug): The discovered bug
         """
-        patches = [bug.patch] if bug.patch else Extractor(5).get_patch_from_commit(source, bug.commits[0])
-        self.patch_contexts = [Extractor(5).extract(patch=patch) for patch in patches]
+        extractor = Extractor(source.language, CONTEXT_LINES)
+        patches = [bug.patch] if bug.patch else extractor.get_patch_from_commit(source, bug.commits[0])
+        self.patch_contexts = [extractor.extract(patch=patch) for patch in patches]
         self.patch_codes = [PatchCode(patch).fetch() for patch in patches]
         logger.info("clients: detection_methods: BlockScope ready.")
 

@@ -13,24 +13,9 @@ from coinwatch.settings import CONTEXT_LINES
 from coinwatch.src.common import Filter, log_wrapper
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context
+from coinwatch.src.schemas import CandidateCode, Sentence, TargetContext
 
 logger = structlog.get_logger(__name__)
-
-
-@dataclass
-class Sentence:
-    filename: str
-    file_extension: str
-    line_number: int
-    sentence: str
-
-
-@dataclass
-class TargetContext:
-    key_statements: Tuple[Sentence, Sentence]
-    boundary: List[Tuple[Tuple[int, int], Tuple[int, int]]]
-    upper_code: List[Tuple[int, str]] = field(default_factory=list)
-    lower_code: List[Tuple[int, str]] = field(default_factory=list)
 
 
 class Searcher:
@@ -174,15 +159,15 @@ class Searcher:
         upper_pctx = self.upper_context_lines[upper_boundary[0][0] : upper_boundary[1][0] + 1]
         lower_pctx = self.lower_context_lines[lower_boundary[0][0] : lower_boundary[1][0] + 1]
 
-        if (
-            Comparator.compare(upper_pctx, upper_cctx) > self._levenshtein_threshold
-            and Comparator.compare(lower_pctx, lower_cctx) > self._levenshtein_threshold
-        ):
+        if (upper_sim := Comparator.compare(upper_pctx, upper_cctx)) > self._levenshtein_threshold and (
+            lower_sim := Comparator.compare(lower_pctx, lower_cctx)
+        ) > self._levenshtein_threshold:
+            candidate_context.similarity = upper_sim + lower_sim
             return True
         return False
 
-    def _get_candidate_code_list(self, candidates: List[TargetContext], patch_lenght: int) -> List[List[str]]:
-        candidate_code_list: List[List[str]] = []
+    def _get_candidate_code_list(self, candidates: List[TargetContext], patch_lenght: int) -> List[CandidateCode]:
+        candidate_code_list: List[CandidateCode] = []
 
         for candidate in candidates:
             filename = candidate.key_statements[0].filename
@@ -200,13 +185,18 @@ class Searcher:
                 if line_count > patch_lenght * 5:
                     break
                 candidate_code.append(line)
-            if candidate_code and line_count < patch_lenght * 5:
-                candidate_code_list.append(candidate_code)
+            if line_count < patch_lenght * 5:
+                candidate_code_list.append(
+                    CandidateCode(
+                        context=candidate,
+                        code=candidate_code,
+                    )
+                )
 
         return candidate_code_list
 
     @log_wrapper
-    def search(self, patch_length: int) -> List[List[str]]:
+    def search(self, patch_length: int) -> List[CandidateCode]:
         """Find and return candidate codes in target repository."""
         context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]

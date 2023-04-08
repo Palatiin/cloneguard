@@ -1,12 +1,9 @@
 # schemas.py
 
 import datetime
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
-from dataclasses import dataclass
-
-
-__all__ = ["VulnerabilityStatus", "ReferenceType", "Weakness", "Reference", "CVE"]
+from typing import Dict, List, Tuple
 
 
 class VulnerabilityStatus(str, Enum):
@@ -19,6 +16,7 @@ class ReferenceType(str, Enum):
     issue = "I"
     pull = "PR"
     release_notes = "RN"
+    commit = "C"
 
 
 @dataclass
@@ -50,3 +48,26 @@ class CVE:
     weaknesses: List[Weakness]
     references: List[Reference]
     json: Dict
+
+
+@dataclass
+class Sentence:
+    filename: str
+    file_extension: str
+    line_number: int
+    sentence: str
+
+
+@dataclass
+class TargetContext:
+    key_statements: Tuple[Sentence, Sentence]
+    boundary: List[Tuple[Tuple[int, int], Tuple[int, int]]]
+    upper_code: List[Tuple[int, str]] = field(default_factory=list)
+    lower_code: List[Tuple[int, str]] = field(default_factory=list)
+    similarity: float = 0.0
+
+
+@dataclass
+class CandidateCode:
+    context: TargetContext
+    code: List[str]
