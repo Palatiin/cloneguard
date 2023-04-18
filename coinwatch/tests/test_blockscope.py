@@ -30,4 +30,12 @@ test_cases = [
     ("bitcoin", "CVE-2018-17145", "dash", "2023-04-08", [(True, 1.4395524955436718)]),
     ("bitcoin", "CVE-2018-17145", "Ravencoin", "2023-04-08", [(True, 1.5997935091868916)]),
     ("bitcoin", "CVE-2018-17145", "BTCGPU", "2023-04-08", [(True, 2.0)]),
+    # BTC PR#15337, tricky one, affected file contains multiple similar code segments
+    # TODO: debug dogecoin, zcash, bitcoin-abc & sv, Raven
+    ("bitcoin", "PR#15337", "qtum", "2023-04-08", [(True, 1.0)]),
+    ("bitcoin", "PR#15337", "BTCGPU", "2023-04-08", [(False, 1.8082232760830557)]),  # TODO report this one
+    # FIXME: ("bitcoin", "PR#15337", "bitcoin-abc", "2023-04-08", [(False, 1.4214285714285713)]),  # should be TRUE
+    ("bitcoin", "PR#15337", "dash", "2023-04-08", [(True, 1.0)]),
+    ("bitcoin", "PR#15337", "digibyte", "2023-04-08", [(True, 1.0)]),
+    ("bitcoin", "PR#15337", "litecoin", "2023-04-08", [(True, 1.0)]),
 ]

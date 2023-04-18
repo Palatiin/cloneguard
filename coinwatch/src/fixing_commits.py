@@ -98,6 +98,8 @@ class FixCommitFinder:
         self.stored_cve = self.check_db(cve)
         if cache and self.stored_cve:
             return
+        if "PR#" in cve:
+            return
 
         self.cve: CVE = CVEClient().cve_id(cve)
         load_references(repo, self.cve.references)

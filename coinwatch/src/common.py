@@ -8,14 +8,55 @@ import structlog
 
 
 class Filter(object):
-    extensions = {"py", "c", "cpp", "go"}
+    extensions = {"py", "c", "cpp", "go", "h", "hpp"}
     _re_lang_comment = {
         "py": r'\s*(#|""").*?{}',
         "c": r"\s*(/\*|//|/\*\*).*?{}",
+        "h": r"\s*(/\*|//|/\*\*).*?{}",
         "cpp": r"\s*(/\*|//|/\*\*).*?{}",
+        "hpp": r"\s*(/\*|//|/\*\*).*?{}",
         "go": r"\s*(//|/\*).*?{}",
+        "hs": r"\s*(--|{-).*?{}",
     }
-    _re_brackets = re.compile(r"\s*[\[\](){}]+\s*(?:;\s*)?$")
+    _re_brackets = re.compile(r"\s*[\[\](){}]+\s*(?:[;,]\s*)?$")
+    __c_keywords = {
+        "auto",
+        "bool",
+        "char",
+        "const",
+        "false",
+        "float",
+        "int",
+        "long",
+        "return",
+        "short",
+        "signed",
+        "unsigned",
+        "void",
+    }
+    _lang_frequent_keywords = {
+        "py": {
+            "and",
+            "as",
+            "break",
+            "elif",
+            "else",
+            "False",
+            "for",
+            "if",
+            "in",
+            "not",
+            "or",
+            "return",
+            "True",
+            "while",
+        },
+        "c": __c_keywords,
+        "cpp": __c_keywords,
+        "h": __c_keywords,
+        "hpp": __c_keywords,
+        "go": {"uint64", "var"},
+    }
 
     @classmethod
     def line(cls, line: str, filename: str = "", file_ext: str = "", keyword: str = "") -> bool:

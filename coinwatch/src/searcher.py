@@ -62,7 +62,7 @@ class Searcher:
 
     @staticmethod
     def make_candidate_context_ks_pairs(
-        upper_ksi: int, lower_ksi: int, occurrences: List[List[List[Tuple[Sentence, float]]]]
+        upper_ksi: int, lower_ksi: int, occurrences: List[List[List[Tuple[Sentence, float]]]], patch_length: int
     ) -> List[Tuple[Sentence, Sentence]]:
         """Write something."""
         if upper_ksi < 0 or lower_ksi < 0:
@@ -74,6 +74,7 @@ class Searcher:
                 if (
                     upper_occurrence.filename == lower_occurrence.filename
                     and upper_occurrence.line_number < lower_occurrence.line_number
+                    and lower_occurrence.line_number - upper_occurrence.line_number < patch_length * 6
                 ):
                     ks_pairs.append((upper_occurrence, lower_occurrence))
 
@@ -223,7 +224,9 @@ class Searcher:
 
         upper_ksi: int = key_statement_pos[0][0]
         lower_ksi: int = key_statement_pos[1][0]
-        candidate_context_ks_pairs = self.make_candidate_context_ks_pairs(upper_ksi, lower_ksi, context_kw_occurrences)
+        candidate_context_ks_pairs = self.make_candidate_context_ks_pairs(
+            upper_ksi, lower_ksi, context_kw_occurrences, patch_length
+        )
         del context_kw_occurrences
 
         # create list of candidate contexts

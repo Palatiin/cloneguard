@@ -66,6 +66,7 @@ class Detection(Base):
 
     id = Column(Integer(), detection_id_sequence, primary_key=True)
     created = Column(DateTime(), nullable=False, default=func.now())
+    vulnerable = Column(Boolean(), nullable=False)
     confidence = Column(Float(), nullable=False)
 
     bug = Column(Integer(), ForeignKey("bug.id"))

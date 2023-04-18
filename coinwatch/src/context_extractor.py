@@ -44,6 +44,11 @@ class Extractor:
 
         Raises ContextExtractionError if the lines do not contain additions/deletions.
         """
+        # def get_keyword(line: str) -> str:
+        #     tokens = sorted(self._tokenize(line))
+        #     for token in tokens:
+        #
+        #     return tokens[0]
         context = Context()
 
         for line in lines:

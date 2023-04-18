@@ -128,6 +128,14 @@ class Git:
     def checkout(self, branch: str = "master"):
         command = ["git", "checkout", branch]
         logger.info("git: checkout: Command: " + " ".join(command), repo=self.repo)
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
+        if process.returncode == 0 or branch != "master":
+            return
+        # else try 'main'
+
+        command = ["git", "checkout", "main"]
+        logger.info("git: checkout: Command: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
 
     def sync(self) -> NoReturn:
