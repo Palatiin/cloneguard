@@ -8,12 +8,14 @@ from typing import List
 
 import structlog
 
+import coinwatch.src.db.crud as crud
 from coinwatch.clients.git import Git
 from coinwatch.settings import CONTEXT_LINES
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Extractor
-from coinwatch.src.db.schema import Bug
+from coinwatch.src.db.schema import Bug, Detection
+from coinwatch.src.db.session import db_session
 from coinwatch.src.patch_fetcher import PatchCode
 from coinwatch.src.searcher import Searcher
 
@@ -70,6 +72,7 @@ class BlockScope:
             source (Git): Repository, where the bug was discovered
             bug (Bug): The discovered bug
         """
+        self.bug = bug
         extractor = Extractor(source.language, CONTEXT_LINES)
         patches = [bug.patch] if bug.patch else extractor.get_patch_from_commit(source, bug.commits[0])
         self.patch_contexts = [extractor.extract(patch=patch) for patch in patches]
@@ -94,11 +97,17 @@ class BlockScope:
             search_result = Searcher(context, repo).search(len(code.code))
             applications = [Comparator.determine_patch_application(code, candidate) for candidate in search_result]
             applications = [application for application in applications if application[0] is not None]
-            logger.info(f"Patch part application statuses: {applications}")
+            logger.info(f"Patch part application statuses: {applications}", repo=repo.repo)
             if not applications:
                 patch_applications.append(())
                 continue
             # select the one with the highest similarity
             patch_applications.append(max(applications, key=lambda x: x[1]))
 
+        logger.info(f"Applied patch: {patch_applications}", repo=repo.repo)
+
+        vulnerable = [] if not patch_applications[0] else [res for res in patch_applications if not res[0]]
+        not_applied = None if not vulnerable else max(vulnerable, key=lambda x: x[1])
+        if not_applied:
+            crud.detection.create(db_session, Detection(confidence=not_applied[1], bug=self.bug.id, project=repo.id))
         return patch_applications

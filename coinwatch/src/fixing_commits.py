@@ -79,6 +79,7 @@ class FixCommitFinder:
             "issue": re.compile(r"issue\s*#(\d+)\b"),
         },
         "commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
+        "cwe": re.compile(r"DOS|overflow|underflow|race|deadlock|infinite|leak|insecure|bypass"),
     }
 
     _keyword_count = 10

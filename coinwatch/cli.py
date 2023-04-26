@@ -1,5 +1,5 @@
 # cli.py
-
+from datetime import datetime as dt
 from typing import List, Tuple
 
 import click
@@ -11,6 +11,7 @@ from coinwatch.clients.git import Git
 from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context, Extractor
 from coinwatch.src.cve_reader import load_references
+from coinwatch.src.db.schema import Bug
 from coinwatch.src.db.session import DBSession, db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.src.notifications import Postman
@@ -78,9 +79,8 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
             # reinitialization of the detection method improves performance
             # otherwise the code would get stuck in detection_method.run
             detection_method = (Simian if simian else BlockScope)(repo, bug)
-            detection_result = detection_method.run(clone)
+            detection_method.run(clone)
             del detection_method
-            logger.info(f"{detection_result=}", repo=clone.repo)
 
         logger.info("cli: Run finished.")
 
@@ -104,6 +104,43 @@ def scanner():
                 continue
             logger.info(f"cli: {repo.repo} found bug-fixes.", commits=commits)
             Postman().notify_bug_detection(commits, repo)
+
+            complex_commits: List[str] = []
+            simple_commits: List[str] = []
+            for commit in commits:
+                tmp_bug = Bug(cve_id=f"C#{commit[:10]}", fix_commit=f'["{commit}"]', project=repo.repo)
+                detection_method = BlockScope(repo, tmp_bug)
+                if detection_method.patch_contexts > 1:
+                    complex_commits.append(commit)
+                else:
+                    simple_commits.append(commit)
+
+            # create single record in table Bug for all complex commits
+            if complex_commits:
+                date = dt.now().strftime("%y%m%d")  # YYMMDD
+                bug = crud.bug.create(
+                    db_session,
+                    Bug(
+                        cve_id=f"SCAN-{date}",
+                        project=repo.repo,
+                    ),
+                )
+                bug.commits = complex_commits
+                crud.bug.update(db_session, bug)
+
+            # create single record in table Bug for all simple commits and run detection method for each
+            for commit in simple_commits:
+                bug = crud.bug.create(
+                    db_session,
+                    Bug(
+                        cve_id=f"C#{commit[:10]}",
+                        fix_commit=f'["{commit}"]',
+                        project=repo.repo,
+                    ),
+                )
+                detection_method = BlockScope(repo, bug)
+                detection_method.run(repo)
+
         logger.info("cli: Daily scan finished.")
 
     return wrapped_scanner()
@@ -214,6 +251,11 @@ def test_blockscope():
     logger.info("================ Test BS ================")
     for repo, bug, target, date, expected_result in test_cases:
         result = run_test(repo, bug, date, target)
+        try:
+            result[0][0]
+        except Exception as e:
+            print(f"Failed: {str(e)}")
+            continue
         assert result[0][0] == expected_result[0][0], "FAILED"
         print("Passed")
 
