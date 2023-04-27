@@ -1,4 +1,4 @@
-version: '3.4'
+version: '3.9'
 
 volumes:
   coinwatch_data:
@@ -30,5 +30,25 @@ services:
       PG_PORT: 5432
     env_file:
       - ./coinwatch/.env
+    depends_on:
+      - db
+
+  api:
+    image: app
+    command: uvicorn coinwatch.api:app --host 0.0.0.0
+    volumes:
+      - .:/app
+    build:
+      context: .
+    environment:
+      DB_NAME: postgres
+      PG_USER: admin
+      PG_PASS: postgres
+      PG_HOST: host.docker.internal
+      PG_PORT: 5432
+    env_file:
+      - ./coinwatch/.env
+    ports:
+      - 8000:8000
     depends_on:
       - db
