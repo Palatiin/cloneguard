@@ -10,12 +10,13 @@ import structlog
 import coinwatch.settings as auth
 from coinwatch.clients.git import Git
 
-logger = structlog.get_logger(__name__)
-
 
 class Postman(object):
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
+
+    def __init__(self):
+        self.logger = structlog.get_self.logger(__name__)
 
     def notify_bug_detection(self, commits: List[str], repo: Git):
         message = MIMEMultipart()
@@ -43,6 +44,6 @@ class Postman(object):
                 server.starttls()
                 server.login(auth.SMTP_LOGIN, auth.SMTP_PASSWORD)
                 server.sendmail(message["From"], message["To"], message.as_string())
-            logger.info("notifications: notify: Notification sent.")
+            self.logger.info("notifications: notify: Notification sent.")
         except Exception as e:
-            logger.warning(f"notifications: notify: {str(e)}")
+            self.logger.warning(f"notifications: notify: {str(e)}")

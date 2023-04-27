@@ -2,6 +2,39 @@
 
 import os
 
+import structlog
+
+
+class FileWriterProcessor:
+    def __init__(self, filename: str):
+        self.filename = filename
+
+    def __call__(self, _, __, event_dict):
+        with open(self.filename, "a") as f:
+            message = f"{event_dict['timestamp']} [{event_dict['level']: <9}] {event_dict['event']}\n"
+            f.write(message)
+        return message
+
+
+def configure_logging(filename: str | None = None):
+    processors = [
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.TimeStamper(fmt="%Y-%m-%d %H:%M:%S"),
+    ]
+    if filename:
+        processors.append(FileWriterProcessor(filename))
+    structlog.configure(
+        processors=processors,
+        context_class=dict,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=True,
+    )
+
+
 ENV = os.getenv("ENVIRONMENT")
 
 GITHUB_API_ACCESS_TOKEN = os.getenv("GITHUB_API_ACCESS_TOKEN")
@@ -21,3 +54,5 @@ DB_NAME = os.getenv("DB_NAME", "postgres")
 
 SMTP_LOGIN = os.getenv("SMTP_LOGIN")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
+timestamp: int | None = None

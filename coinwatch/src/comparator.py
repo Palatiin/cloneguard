@@ -3,14 +3,11 @@ import multiprocessing
 from enum import Enum
 from typing import List
 
-import structlog
 from similarity.normalized_levenshtein import NormalizedLevenshtein  # noqa
 
 from coinwatch.settings import REWARD, THRESHOLD
 from coinwatch.src.patch_fetcher import PatchCode, PatchType
 from coinwatch.src.schemas import CandidateCode
-
-logger = structlog.get_logger()
 
 
 class TypeOfPatch(int, Enum):

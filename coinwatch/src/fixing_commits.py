@@ -57,7 +57,6 @@ from coinwatch.src.schemas import CVE, ReferenceType
 
 nltk.download("punkt", quiet=True)
 nltk.download("averaged_perceptron_tagger", quiet=True)
-logger = structlog.get_logger(__name__)
 
 
 class FixCommitFinder:
@@ -93,6 +92,8 @@ class FixCommitFinder:
             cve (str): searched CVE identifier
             cache (bool): use cached data in DB
         """
+        self.logger = structlog.get_self.logger(__name__)
+
         if not cve:
             self.repo = repo
             return
@@ -157,7 +158,7 @@ class FixCommitFinder:
         for _hash, commit in recent_commits:
             if (keyword := self._res["default"]["keyword"].search(commit)) and not ignore_commit(commit):
                 keyword = keyword.group(0)
-                logger.info(f"scan_recent: Matched {keyword=}.")
+                self.logger.info(f"scan_recent: Matched {keyword=}.")
                 candidates.append(_hash)
 
         return candidates

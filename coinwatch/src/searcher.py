@@ -15,13 +15,13 @@ from coinwatch.src.comparator import Comparator
 from coinwatch.src.context_extractor import Context
 from coinwatch.src.schemas import CandidateCode, Sentence, TargetContext
 
-logger = structlog.get_logger(__name__)
-
 
 class Searcher:
     _levenshtein_threshold = 0.25
 
     def __init__(self, context: Tuple[Context, Context], target_repo: Git):
+        self.logger = structlog.get_self.logger(__name__)
+
         self.context = context
         self.upper_context_lines = [pair[0] for pair in self.context[0].sentence_keyword_pairs]
         self.lower_context_lines = [pair[0] for pair in self.context[1].sentence_keyword_pairs]
@@ -203,7 +203,7 @@ class Searcher:
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
-        logger.info("searcher: search: start finding KS")
+        self.logger.info("searcher: search: start finding KS")
         for i, context in enumerate(self.context):
             for j, sentence_keyword_pair in enumerate(context.sentence_keyword_pairs):
                 sentence, keyword = sentence_keyword_pair
@@ -220,7 +220,7 @@ class Searcher:
                 ):
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
                 context_kw_occurrences[i].append(occurrences)
-        logger.info("searcher: search: KS found")
+        self.logger.info("searcher: search: KS found")
 
         upper_ksi: int = key_statement_pos[0][0]
         lower_ksi: int = key_statement_pos[1][0]
