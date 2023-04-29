@@ -20,7 +20,7 @@ class Searcher:
     _levenshtein_threshold = 0.25
 
     def __init__(self, context: Tuple[Context, Context], target_repo: Git):
-        self.logger = structlog.get_self.logger(__name__)
+        self.logger = structlog.get_logger(__name__)
 
         self.context = context
         self.upper_context_lines = [pair[0] for pair in self.context[0].sentence_keyword_pairs]

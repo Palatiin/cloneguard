@@ -99,21 +99,23 @@ def scanner():
             logger.info(f"cli: Scanning project.", repo=repo.repo)
             finder = FixCommitFinder(repo)
             commits = finder.scan_recent()
-            if not commits:
-                logger.info(f"cli: Project OK.", repo=repo.repo)
-                continue
-            logger.info(f"cli: {repo.repo} found bug-fixes.", commits=commits)
-            Postman().notify_bug_detection(commits, repo)
 
             complex_commits: List[str] = []
             simple_commits: List[str] = []
             for commit in commits:
                 tmp_bug = Bug(cve_id=f"C#{commit[:10]}", fix_commit=f'["{commit}"]', project=repo.repo)
                 detection_method = BlockScope(repo, tmp_bug)
-                if detection_method.patch_contexts > 1:
+                if len(detection_method.patch_contexts) > 1:
                     complex_commits.append(commit)
-                else:
+                elif len(detection_method.patch_contexts):
                     simple_commits.append(commit)
+
+            commits = complex_commits + simple_commits
+            if not commits:
+                logger.info(f"cli: Project OK.", repo=repo.repo)
+                continue
+            logger.info(f"cli: {repo.repo} found bug-fixes.", commits=commits)
+            Postman().notify_bug_detection(commits, repo)
 
             # create single record in table Bug for all complex commits
             if complex_commits:
@@ -128,7 +130,7 @@ def scanner():
                 bug.commits = complex_commits
                 crud.bug.update(db_session, bug)
 
-            # create single record in table Bug for all simple commits and run detection method for each
+            # create single record in table Bug for each simple commits and run detection method for each
             for commit in simple_commits:
                 bug = crud.bug.create(
                     db_session,

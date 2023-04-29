@@ -69,7 +69,7 @@ class CRUDDetection(CRUDBase[Detection]):
         return db.query(self.model).filter_by(bug=bug_id, project=project_id).first()
 
     def get_all_after(self, db: Session, timestamp: int) -> List[ModelType]:
-        return db.query(self.model).filter(self.model.timestamp > timestamp).all()
+        return db.query(self.model).filter(self.model.created > timestamp).all()
 
 
 bug = CRUDBug(Bug)

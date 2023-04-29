@@ -11,9 +11,20 @@ class FileWriterProcessor:
 
     def __call__(self, _, __, event_dict):
         with open(self.filename, "a") as f:
-            message = f"{event_dict['timestamp']} [{event_dict['level']: <9}] {event_dict['event']}\n"
+            other_keys = self.format_other_keys(event_dict)
+            message = (
+                f"{event_dict['timestamp']} [{event_dict['level']: <9}] {event_dict['event']}"
+                f"{'    ' + other_keys if other_keys else ''}\n"
+            )
             f.write(message)
         return message
+
+    @staticmethod
+    def format_other_keys(event_dict):
+        other_keys = [
+            f"{key}={value}" for key, value in event_dict.items() if key not in {"timestamp", "level", "event"}
+        ]
+        return " ".join(other_keys)
 
 
 def configure_logging(filename: str | None = None):
@@ -51,6 +62,9 @@ PG_PASS = os.getenv("PG_PASS", "postgres")
 PG_HOST = os.getenv("PG_HOST", "host.docker.internal")
 PG_PORT = os.getenv("PG_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "postgres")
+
+REDIS_HOST = os.getenv("REDIS_HOST", "host.docker.internal")
+REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 
 SMTP_LOGIN = os.getenv("SMTP_LOGIN")
 SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
