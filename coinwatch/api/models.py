@@ -263,6 +263,13 @@ class DetectionModel(CGApiModel):
         example="dogecoin",
     )
 
+    vulnerable: str = Field(
+        default=...,
+        title="Vulnerability status",
+        description="Vulnerability status of the clone.",
+        example="True",
+    )
+
     confidence: float = Field(
         default=...,
         title="Result confidence",
@@ -271,7 +278,7 @@ class DetectionModel(CGApiModel):
     )
 
     location: str = Field(
-        default=...,
+        default="",
         title="Location of the clone",
         description="Location where the clone was detected by the detection method - <file>:<start_line>.",
         example="validation.cpp:588",
@@ -282,7 +289,7 @@ class DetectionStatusModel(CGApiModel):
     """Detection status model."""
 
     detection_results: List[DetectionModel] = Field(
-        default="[]",
+        default=[],
         title="Detection results",
         description="Detection results.",
     )
@@ -336,7 +343,7 @@ class SearchResponse(APIResponse):
     """Search response."""
 
     _status_code: int = 200
-    search_result: SearchResultModel = SearchResultModel
+    search_result: SearchResultModel = ...
 
 
 class DetectionExecutedResponse(APIResponse):

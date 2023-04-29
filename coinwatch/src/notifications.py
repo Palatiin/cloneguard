@@ -16,7 +16,7 @@ class Postman(object):
     smtp_port: int = 587
 
     def __init__(self):
-        self.logger = structlog.get_self.logger(__name__)
+        self.logger = structlog.get_logger(__name__)
 
     def notify_bug_detection(self, commits: List[str], repo: Git):
         message = MIMEMultipart()

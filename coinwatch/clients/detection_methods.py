@@ -1,5 +1,6 @@
 # simian.py
 
+import base64
 import os
 import re
 import subprocess
@@ -41,7 +42,7 @@ class Simian:
         self.threshold = bug.code.count("\n") or 1  # threshold must be > 0
         self.test_file = f"tmp.simian"
         with open(self.test_file, "w", encoding="UTF-8") as file:
-            file.write(bug.code)
+            file.write(base64.b64decode(bug.code).decode("utf-8"))
 
         logger.info("clients: detection_methods: Simian ready.")
 
@@ -74,7 +75,11 @@ class BlockScope:
         """
         self.bug = bug
         extractor = Extractor(source.language, CONTEXT_LINES)
-        patches = [bug.patch] if bug.patch else extractor.get_patch_from_commit(source, bug.commits[0])
+        patches = (
+            [base64.b64decode(bug.patch).decode("utf-8")]
+            if bug.patch
+            else extractor.get_patch_from_commit(source, bug.commits[0])
+        )
         self.patch_contexts = [extractor.extract(patch=patch) for patch in patches]
         self.patch_codes = [PatchCode(patch).fetch() for patch in patches]
         logger.info("clients: detection_methods: BlockScope ready.")

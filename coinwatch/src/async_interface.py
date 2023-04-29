@@ -4,9 +4,13 @@
 # Description: Async interface for API
 
 import os
+import re
 from datetime import datetime as dt
 from multiprocessing import Process
 
+import orjson
+import redis
+from rq import Queue
 from structlog import get_logger
 
 import coinwatch.settings as settings
@@ -22,12 +26,11 @@ from coinwatch.api.models import (
     ValidationError,
 )
 from coinwatch.api.schemas import DetectionMethodExecutionSchema, NewProjectSchema, SearchRequestSchema, UpdateBugSchema
-from coinwatch.clients.detection_methods import BlockScope, Simian
 from coinwatch.clients.git import Git
 from coinwatch.src.db.schema import Project
 from coinwatch.src.db.session import db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
-from coinwatch.src.update_repos import get_repo_objects, update_repos
+from coinwatch.tasks import execute_task
 
 logger = get_logger(__name__)
 
@@ -145,40 +148,23 @@ async def search_bugs(data: SearchRequestSchema) -> SearchResultModel:
 
 
 async def execute_detection_method(data: DetectionMethodExecutionSchema):
-    def execute(d: DetectionMethodExecutionSchema):
-        logger.info("Starting detection method...")
-        bug = crud.bug.get(db_session, d.bug_id)
-        bug = bug.copy()
-        bug.commits = d.commit
-        if d.method == "simian":
-            bug.code = d.patch
-        else:
-            bug.patch = d.patch
-
-        repo = crud.project.get_by_name(db_session, d.project_name)
-        repo = Git(repo)
-
-        clones = get_repo_objects(source=repo)
-        update_repos(clones, d.date)
-
-        for clone in clones:
-            detection_method = (Simian if d.detect_method == "simian" else BlockScope)(repo, bug)
-            detection_method.run(clone)
-
-        logger.info("Detection method finished.")
-
     try:
         if not data.bug_id or not data.commit or not data.patch:
             raise ValidationError("Missing value: bug_id or commit or patch")
 
         try:
-            if not os.path.exists(f"{settings.CACHE_PATH}/logs"):
-                os.makedirs(f"{settings.CACHE_PATH}/logs", exist_ok=True)
-            settings.timestamp = dt.now().timestamp()
-            settings.configure_logging(filename=f"{settings.CACHE_PATH}/logs/{settings.timestamp}.log")
-
-            detection_process = Process(target=execute, args=data)
-            detection_process.start()
+            redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
+            queue = Queue("detection_queue", connection=redis_conn, default_timeout=600)
+            queue.enqueue(
+                execute_task,
+                data.bug_id,
+                data.commit,
+                data.patch,
+                data.method,
+                data.project_name,
+                data.date,
+                dt.now().timestamp(),
+            )
 
         except Exception as e:
             raise InternalServerError(e)
@@ -193,24 +179,35 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
 
 async def get_status():
     try:
-        logs = ""
         if os.path.exists(f"{settings.CACHE_PATH}/logs"):
             log_file = sorted(os.listdir(f"{settings.CACHE_PATH}/logs"), reverse=True)[0]
             with open(f"{settings.CACHE_PATH}/logs/{log_file}", "r") as f:
                 logs = f.read()
+        else:
+            raise Exception("No logs found")
 
-        detections = crud.detection.get_all_after(db_session, int(log_file.split(".")[0]))
+        detections = []
+        for match in re.finditer(r"Applied\s*patch:\s*(\[.*?\])\s*repo=(\S+)\b", logs):
+            project = match.group(2)
+            results = orjson.loads(
+                match.group(1).replace("(", "[").replace(")", "]").replace("False", "false").replace("True", "true")
+            )
+            detections.extend(
+                [
+                    DetectionModel(
+                        project_name=project,
+                        vulnerable="False" if result[0] else "True",
+                        confidence=round(result[1], 3),
+                        location="",  # result[2],
+                    )
+                    for result in results
+                    if result
+                ]
+            )
 
         return DetectionStatusModel(
             logs=logs,
-            detections=[
-                DetectionModel(
-                    project_name=crud.project.get(db_session, detection.project).name,
-                    confidence=detection.confidence,
-                    location="{}:{}".format(detection.file, detection.line),
-                )
-                for detection in detections
-            ],
+            detection_results=detections,
         )
 
     except ValidationError as e:

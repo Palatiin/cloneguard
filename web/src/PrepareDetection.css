@@ -1,0 +1,71 @@
+.prepare-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    height: 100%;
+}
+
+.content {
+    flex-grow: 1;
+}
+
+.form-container {
+    display: flex;
+    align-items: center;
+}
+
+.input-container {
+    display: flex;
+    flex-direction: column;
+    margin-right: 20px;
+}
+
+.commits-container {
+    box-sizing: border-box;
+    margin-top: 20px;
+    width: 30%;
+}
+
+.commits-table {
+    border-collapse: collapse;
+    width: 30%;
+}
+
+.commits-table th,
+.commits-table td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+.patch-code-container {
+    box-sizing: border-box;
+    margin-top: 20px;
+    margin-bottom: 30px;
+    width: 100%;
+    white-space: pre-wrap;
+    max-height: 70vh;
+}
+
+textarea {
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: monospace;
+    font-size: 14px;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+.response-container {
+    display: flex;
+    width: 100%;
+    margin-top: 20px;
+}
+
+.bottom-inputs-container {
+    display: flex;
+    margin-top: auto;
+}

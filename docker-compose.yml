@@ -15,9 +15,16 @@ services:
       POSTGRES_USER: admin
       POSTGRES_PASSWORD: postgres
 
-  app:
+  redis:
+    image: redis:alpine
+    logging:
+      driver: none
+    ports:
+      - 6379:6379
+
+  worker:
     image: app
-    command: echo "Hello"
+    command: python3 -m coinwatch.worker
     volumes:
       - .:/app
     build:
@@ -32,10 +39,11 @@ services:
       - ./coinwatch/.env
     depends_on:
       - db
+      - redis
 
   api:
     image: app
-    command: uvicorn coinwatch.api:app --host 0.0.0.0
+    command: uvicorn coinwatch.api:app --host 0.0.0.0 --port 8000
     volumes:
       - .:/app
     build:
@@ -52,3 +60,5 @@ services:
       - 8000:8000
     depends_on:
       - db
+      - redis
+      - worker

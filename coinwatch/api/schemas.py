@@ -93,6 +93,13 @@ class DetectionMethodExecutionSchema(CGApiModel):
         example="CVE-2018-17144",
     )
 
+    project_name: str = Field(
+        default=...,
+        title="Project name",
+        description="Name of the project where the bug was discovered.",
+        example="bitcoin",
+    )
+
     commit: str = Field(
         default="",
         title="Commit hash",

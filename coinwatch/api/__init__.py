@@ -4,6 +4,7 @@
 # Description: API module
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from coinwatch.api import bug, detection, health, project
 
@@ -13,6 +14,15 @@ app = FastAPI(
     docs_url="/api/v1/docs/openapi",
     redoc_url="/api/v1/docs",
     openapi_url="/api/v1/openapi.json",
+)
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Update this to match your frontend domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # routes

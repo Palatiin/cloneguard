@@ -67,7 +67,7 @@ class FixCommitFinder:
         "default",
     ]
 
-    IGNORED_COMMITS = ["test", "ci"]
+    IGNORED_COMMITS = ["test", "ci", "doc"]
 
     _res = {
         "release_notes": {
@@ -77,7 +77,9 @@ class FixCommitFinder:
             "keyword": re.compile(r"fix|\bbug|CVE-\d+|CWE-\d+", flags=re.IGNORECASE),
             "issue": re.compile(r"issue\s*#(\d+)\b"),
         },
-        "commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
+        "merge_commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
+        "commit": re.compile(r"(\w{40}) +(.+)"),
+        "commit_message": re.compile(r"([\w-]+): .+"),
         "cwe": re.compile(r"DOS|overflow|underflow|race|deadlock|infinite|leak|insecure|bypass"),
     }
 
@@ -92,7 +94,7 @@ class FixCommitFinder:
             cve (str): searched CVE identifier
             cache (bool): use cached data in DB
         """
-        self.logger = structlog.get_self.logger(__name__)
+        self.logger = structlog.get_logger(__name__)
 
         if not cve:
             self.repo = repo
@@ -145,8 +147,7 @@ class FixCommitFinder:
 
     def scan_recent(self):
         def ignore_commit(_commit):
-            _commit = _commit.split("\n\n")
-            if match := self._res["commit"].match(_commit[1].strip()):
+            if match := self._res["commit_message"].match(_commit.strip()):
                 if match.group(1) in self.IGNORED_COMMITS:
                     return True
             return False
@@ -156,10 +157,22 @@ class FixCommitFinder:
 
         candidates = []
         for _hash, commit in recent_commits:
-            if (keyword := self._res["default"]["keyword"].search(commit)) and not ignore_commit(commit):
-                keyword = keyword.group(0)
+            commit_parts = commit.split("\n\n")
+
+            if (keyword_1 := self._res["default"]["keyword"].search(commit)) or (
+                keyword_2 := self._res["cwe"].search(commit)
+            ):
+                keyword = (keyword_1 or keyword_2).group(0)
                 self.logger.info(f"scan_recent: Matched {keyword=}.")
-                candidates.append(_hash)
+                if commit_parts[1].strip().startswith("Merge"):
+                    for line in self._res["commit"].finditer(commit):
+                        if not ignore_commit(line.group(2)):
+                            candidates.append(line.group(1))
+                elif self._res["commit_message"].match(commit_parts[1]):
+                    if not ignore_commit(commit_parts[1]):
+                        candidates.append(_hash)
+                else:
+                    candidates.append(_hash)
 
         return candidates
 
