@@ -307,7 +307,14 @@ class DetectionStatusModel(CGApiModel):
     """Detection status model."""
 
     detection_results: List[DetectionModel] = Field(
-        default=[],
+        default=[
+            DetectionModel(
+                project_name="dogecoin",
+                vulnerable=True,
+                confidence=0.9,
+                location="validation.cpp:588",
+            )
+        ],
         title="Detection results",
         description="Detection results.",
     )

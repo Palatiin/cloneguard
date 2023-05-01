@@ -5,7 +5,6 @@
 
 from fastapi import APIRouter, Path
 
-import coinwatch.src.db.crud as crud
 from coinwatch.api.models import (
     DetectionExecutedResponse,
     DetectionStatusResponse,
@@ -85,7 +84,7 @@ async def search(data: SearchRequestSchema):
 async def show_commit(data: ShowCommitSchema):
     try:
         commit: ShowCommitModel = await fetch_commit(data)
-        return ShowCommitResponse(commit=commit.commit, patch=commit.patch)
+        return ShowCommitResponse(commit=commit)
     except NotFoundError as e:
         return NotFoundErrorResponse().response(message=str(e))
     except ValidationError as e:
