@@ -60,42 +60,6 @@ async def get_bugs():
         return ResourceUnavailableErrorResponse().response(message=str(e))
 
 
-@router.get(
-    path="/{id}",
-    responses={
-        200: {
-            "model": BugResponse,
-            "description": BugResponse.__doc__,
-        },
-        404: {
-            "model": NotFoundErrorResponse,
-            "description": NotFoundErrorResponse.__doc__,
-        },
-        503: {
-            "model": ResourceUnavailableErrorResponse,
-            "description": ResourceUnavailableErrorResponse.__doc__,
-        },
-    },
-)
-async def get_bug(id: str = Path(..., title="Bug ID", description="ID of the bug to fetch")):
-    try:
-        bug = crud.bug.get_cve(db_session, id)
-        if not bug:
-            return NotFoundErrorResponse().response(message=f"Bug with ID {id} not found.")
-        return BugResponse(
-            bug=BugModel(
-                index=0,
-                id=bug.cve_id,
-                fix_commit=bug.fix_commit,
-                patch=bug.patch or "",
-                code=bug.code or "",
-                verified=bug.verified,
-            )
-        )
-    except Exception as e:
-        return ResourceUnavailableErrorResponse().response(message=str(e))
-
-
 @router.post(
     path="/update",
     status_code=200,

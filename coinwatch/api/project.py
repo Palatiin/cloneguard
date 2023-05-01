@@ -58,41 +58,6 @@ async def get_projects():
         return ResourceUnavailableErrorResponse().response(message=str(e))
 
 
-@router.get(
-    path="/{name}",
-    responses={
-        200: {
-            "model": ProjectResponse,
-            "description": ProjectResponse.__doc__,
-        },
-        404: {
-            "model": NotFoundErrorResponse,
-            "description": NotFoundErrorResponse.__doc__,
-        },
-        503: {
-            "model": ResourceUnavailableErrorResponse,
-            "description": ResourceUnavailableErrorResponse.__doc__,
-        },
-    },
-)
-async def get_project(name: str):
-    try:
-        project = crud.project.get_by_name(db_session, name)
-        if not project:
-            return NotFoundErrorResponse().response(message=f"Project with name {name} not found.")
-        return ProjectResponse(
-            project=ProjectModel(
-                index=0,
-                name=project.name,
-                owner=project.author,
-                language=project.language,
-                parent="" if not project.parent_id else crud.project.get(db_session, project.parent_id).name,
-            )
-        )
-    except Exception as e:
-        return ResourceUnavailableErrorResponse().response(message=str(e))
-
-
 @router.post(
     path="/register",
     status_code=201,
