@@ -110,7 +110,7 @@ async def get_project(name: str):
         },
     },
 )
-async def register_project(data: NewProjectSchema):
+async def register(data: NewProjectSchema):
     try:
         project: ProjectModel = await register_project(data)
         return ProjectResponse(project=project)

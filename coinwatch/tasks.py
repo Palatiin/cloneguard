@@ -19,6 +19,13 @@ import coinwatch.settings as settings
 logger = structlog.get_logger(__name__)
 
 
+def clone_task(project_name: str):
+    logger.info("Starting cloning task...")
+    repo = crud.project.get_by_name(db_session, project_name)
+    Git(repo)
+    logger.info("Cloning task finished.")
+
+
 def execute_task(bug_id: str, commit: str, patch: str, method: str, project_name: str, date: str, timestamp):
     if not os.path.exists(f"{settings.CACHE_PATH}/logs"):
         os.makedirs(f"{settings.CACHE_PATH}/logs")

@@ -5,6 +5,7 @@
 
 import os
 import re
+import base64
 from datetime import datetime as dt
 from multiprocessing import Process
 
@@ -37,7 +38,7 @@ from coinwatch.clients.git import Git
 from coinwatch.src.db.schema import Project
 from coinwatch.src.db.session import db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
-from coinwatch.tasks import execute_task
+from coinwatch.tasks import clone_task, execute_task
 from coinwatch.settings import REDIS_HOST, REDIS_PORT, CONTEXT_LINES
 
 logger = get_logger(__name__)
@@ -67,11 +68,13 @@ async def register_project(data: NewProjectSchema) -> ProjectModel:
             ),
         )
 
-        def clone_project(p: Project):
-            Git(p)
+        try:
+            redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
+            queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+            queue.enqueue(clone_task, project.name)
 
-        clone_process = Process(target=clone_project, args=project)
-        clone_process.start()
+        except Exception as e:
+            raise InternalServerError(e)
 
         return ProjectModel(
             index=0,
@@ -94,7 +97,7 @@ async def update_bug(data: UpdateBugSchema) -> BugModel:
         if not data.patch and not data.fix_commit:
             raise ValidationError("Missing value: patch or fix_commit")
 
-        bug = crud.bug.get(db_session, data.id)
+        bug = crud.bug.get_cve(db_session, data.id)
         if not bug:
             raise NotFoundError()
 
@@ -173,7 +176,7 @@ async def fetch_commit(data: ShowCommitSchema):
 
         return ShowCommitModel(
             commit=data.commit,
-            patch=commit,
+            patch=base64.b64encode(commit.encode("utf-8")),
         )
     except ValidationError as e:
         raise e
@@ -188,7 +191,7 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
 
         try:
             redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
-            queue = Queue("detection_queue", connection=redis_conn, default_timeout=600)
+            queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
             queue.enqueue(
                 execute_task,
                 data.bug_id,

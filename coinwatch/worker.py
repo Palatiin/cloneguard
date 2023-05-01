@@ -6,9 +6,8 @@
 import os
 import redis
 from rq import Worker, Queue, Connection
-from coinwatch.tasks import execute_task
 
-listen = ["detection_queue"]
+listen = ["task_queue"]
 
 if __name__ == "__main__":
     redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
