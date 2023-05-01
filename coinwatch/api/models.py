@@ -253,6 +253,24 @@ class SearchResultModel(CGApiModel):
     )
 
 
+class ShowCommitModel(CGApiModel):
+    """Commit details model."""
+
+    commit: str = Field(
+        default=...,
+        title="Commit ID",
+        description="Commit ID.",
+        example="a1b2c3d4e5",
+    )
+
+    patch: str = Field(
+        default="",
+        title="Patch code",
+        description="Patch code of the commit, base64 encoded if available.",
+        example="-   if (nValue < 0)\n-        return false;\n+    if (nValue <= 0)\n+        return true;\n",
+    )
+
+
 class DetectionModel(CGApiModel):
     """Detection table model."""
 
@@ -346,11 +364,18 @@ class SearchResponse(APIResponse):
     search_result: SearchResultModel = ...
 
 
+class ShowCommitResponse(APIResponse):
+    """Show commit response."""
+
+    _status_code: int = 200
+    commit: ShowCommitModel = ...
+
+
 class DetectionExecutedResponse(APIResponse):
     """Detection executed response."""
 
-    _status_code: int = 200
-    status: str = "Started."
+    _status_code: int = 201
+    status: str = "Queued."
 
 
 class DetectionStatusResponse(APIResponse):

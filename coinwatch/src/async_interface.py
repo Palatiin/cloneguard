@@ -24,13 +24,21 @@ from coinwatch.api.models import (
     ProjectModel,
     SearchResultModel,
     ValidationError,
+    ShowCommitModel,
 )
-from coinwatch.api.schemas import DetectionMethodExecutionSchema, NewProjectSchema, SearchRequestSchema, UpdateBugSchema
+from coinwatch.api.schemas import (
+    DetectionMethodExecutionSchema,
+    NewProjectSchema,
+    SearchRequestSchema,
+    ShowCommitSchema,
+    UpdateBugSchema,
+)
 from coinwatch.clients.git import Git
 from coinwatch.src.db.schema import Project
 from coinwatch.src.db.session import db_session
 from coinwatch.src.fixing_commits import FixCommitFinder
 from coinwatch.tasks import execute_task
+from coinwatch.settings import REDIS_HOST, REDIS_PORT, CONTEXT_LINES
 
 logger = get_logger(__name__)
 
@@ -144,6 +152,32 @@ async def search_bugs(data: SearchRequestSchema) -> SearchResultModel:
     except InternalServerError as e:
         raise e
     except Exception as e:
+        raise e
+
+
+async def fetch_commit(data: ShowCommitSchema):
+    try:
+        if not data.commit or not data.project_name:
+            raise ValidationError("Missing value: commit or project_name")
+
+        project = crud.project.get_by_name(db_session, data.project_name)
+        if not project:
+            raise ValidationError("Project is not registered.")
+
+        try:
+            project = Git(project)
+
+            commit = project.show(data.commit, quiet=False, context=CONTEXT_LINES * 2)
+        except Exception as e:
+            raise InternalServerError(e)
+
+        return ShowCommitModel(
+            commit=data.commit,
+            patch=commit,
+        )
+    except ValidationError as e:
+        raise e
+    except InternalServerError as e:
         raise e
 
 

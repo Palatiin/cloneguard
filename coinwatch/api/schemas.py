@@ -83,6 +83,24 @@ class SearchRequestSchema(CGApiModel):
     )
 
 
+class ShowCommitSchema(CGApiModel):
+    """Show commit patch schema."""
+
+    project_name: str = Field(
+        default=...,
+        title="Source project name",
+        description="Source project name where the commit should be searched.",
+        example="bitcoin",
+    )
+
+    commit: str = Field(
+        default=...,
+        title="Commit hash",
+        description="Commit hash to fetch.",
+        example="a1b2c3d4e5",
+    )
+
+
 class DetectionMethodExecutionSchema(CGApiModel):
     """Detection method execution request schema."""
 

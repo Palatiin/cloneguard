@@ -14,12 +14,16 @@ from coinwatch.api.models import (
     ResourceUnavailableErrorResponse,
     SearchResponse,
     SearchResultModel,
+    ShowCommitModel,
+    ShowCommitResponse,
     ValidationError,
     ValidationErrorResponse,
+    NotFoundError,
+    NotFoundErrorResponse,
+    DetectionStatusModel,
 )
-from coinwatch.api.schemas import DetectionMethodExecutionSchema, SearchRequestSchema
-from coinwatch.src.async_interface import execute_detection_method, get_status, search_bugs
-from coinwatch.src.db.session import db_session
+from coinwatch.api.schemas import DetectionMethodExecutionSchema, SearchRequestSchema, ShowCommitSchema
+from coinwatch.src.async_interface import execute_detection_method, get_status, search_bugs, fetch_commit
 
 router = APIRouter(
     prefix="/api/v1/detection",
@@ -53,6 +57,39 @@ async def search(data: SearchRequestSchema):
         return ValidationErrorResponse().response(message=str(e))
     except InternalServerError as e:
         return InternalServerErrorResponse().response(message=str(e))
+    except Exception as e:
+        return ResourceUnavailableErrorResponse().response(message=str(e))
+
+
+@router.post(
+    path="/show_commit",
+    responses={
+        200: {
+            "model": ShowCommitResponse,
+            "description": ShowCommitResponse.__doc__,
+        },
+        404: {
+            "model": NotFoundErrorResponse,
+            "description": NotFoundErrorResponse.__doc__,
+        },
+        422: {
+            "model": ValidationErrorResponse,
+            "description": ValidationErrorResponse.__doc__,
+        },
+        503: {
+            "model": ResourceUnavailableErrorResponse,
+            "description": ResourceUnavailableErrorResponse.__doc__,
+        },
+    },
+)
+async def show_commit(data: ShowCommitSchema):
+    try:
+        commit: ShowCommitModel = await fetch_commit(data)
+        return ShowCommitResponse(commit=commit.commit, patch=commit.patch)
+    except NotFoundError as e:
+        return NotFoundErrorResponse().response(message=str(e))
+    except ValidationError as e:
+        return ValidationErrorResponse().response(message=str(e))
     except Exception as e:
         return ResourceUnavailableErrorResponse().response(message=str(e))
 
@@ -109,7 +146,7 @@ async def execute(data: DetectionMethodExecutionSchema):
 )
 async def status():
     try:
-        _status = await get_status()
+        _status: DetectionStatusModel = await get_status()
         return DetectionStatusResponse(status=_status)
     except InternalServerError as e:
         return InternalServerErrorResponse().response(message=str(e))
