@@ -13,7 +13,11 @@ router = APIRouter(
 )
 
 
-@router.get(path="/ping", responses={200: {"model": Pong, "description": Pong.__doc__}})
+@router.get(
+    path="/ping",
+    responses={200: {"model": Pong, "description": Pong.__doc__}},
+    description="Ping the API to see whether it's alive.",
+)
 async def ping():
     """Ping the API to see whether it's alive."""
     return {"pong": True}

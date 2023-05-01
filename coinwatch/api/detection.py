@@ -33,7 +33,7 @@ router = APIRouter(
 @router.post(
     path="/search",
     responses={
-        201: {"model": SearchResponse, "description": SearchResponse.__doc__},
+        200: {"model": SearchResponse, "description": SearchResponse.__doc__},
         422: {
             "model": ValidationErrorResponse,
             "description": ValidationErrorResponse.__doc__,
@@ -47,6 +47,7 @@ router = APIRouter(
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Find the bug fixing commit in the given repository.",
 )
 async def search(data: SearchRequestSchema):
     try:
@@ -80,6 +81,7 @@ async def search(data: SearchRequestSchema):
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Show diff of the candidate commit.",
 )
 async def show_commit(data: ShowCommitSchema):
     try:
@@ -113,6 +115,7 @@ async def show_commit(data: ShowCommitSchema):
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Execute detection method on the clones of the given source project.",
 )
 async def execute(data: DetectionMethodExecutionSchema):
     try:
@@ -142,6 +145,7 @@ async def execute(data: DetectionMethodExecutionSchema):
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Get status of the detection method run.",
 )
 async def status():
     try:

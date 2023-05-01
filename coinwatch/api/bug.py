@@ -38,6 +38,7 @@ router = APIRouter(
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Fetch all bugs stored in the database.",
 )
 async def get_bugs():
     try:
@@ -116,6 +117,7 @@ async def get_bug(id: str = Path(..., title="Bug ID", description="ID of the bug
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Update fix commit, patch or code of the bug in the database.",
 )
 async def update(data: UpdateBugSchema):
     try:

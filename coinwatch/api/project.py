@@ -37,6 +37,7 @@ router = APIRouter(
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Fetch all projects stored in the database.",
 )
 async def get_projects():
     try:
@@ -109,6 +110,7 @@ async def get_project(name: str):
             "description": ResourceUnavailableErrorResponse.__doc__,
         },
     },
+    description="Register a new project.",
 )
 async def register(data: NewProjectSchema):
     try:
