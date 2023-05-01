@@ -19,6 +19,9 @@ services:
     image: redis:alpine
     logging:
       driver: none
+    environment:
+      - REDIS_SAVE=
+      - REDIS_APPENDONLY=no
     ports:
       - 6379:6379
 
