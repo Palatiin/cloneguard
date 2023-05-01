@@ -76,6 +76,10 @@ async def search(data: SearchRequestSchema):
             "model": ValidationErrorResponse,
             "description": ValidationErrorResponse.__doc__,
         },
+        500: {
+            "model": InternalServerErrorResponse,
+            "description": InternalServerErrorResponse.__doc__,
+        },
         503: {
             "model": ResourceUnavailableErrorResponse,
             "description": ResourceUnavailableErrorResponse.__doc__,
@@ -91,6 +95,8 @@ async def show_commit(data: ShowCommitSchema):
         return NotFoundErrorResponse().response(message=str(e))
     except ValidationError as e:
         return ValidationErrorResponse().response(message=str(e))
+    except InternalServerError as e:
+        return InternalServerErrorResponse().response(message=str(e))
     except Exception as e:
         return ResourceUnavailableErrorResponse().response(message=str(e))
 
@@ -106,10 +112,6 @@ async def show_commit(data: ShowCommitSchema):
             "model": ValidationErrorResponse,
             "description": ValidationErrorResponse.__doc__,
         },
-        500: {
-            "model": InternalServerErrorResponse,
-            "description": InternalServerErrorResponse.__doc__,
-        },
         503: {
             "model": ResourceUnavailableErrorResponse,
             "description": ResourceUnavailableErrorResponse.__doc__,
@@ -123,8 +125,6 @@ async def execute(data: DetectionMethodExecutionSchema):
         return DetectionExecutedResponse()
     except ValidationError as e:
         return ValidationErrorResponse().response(message=str(e))
-    except InternalServerError as e:
-        return InternalServerErrorResponse().response(message=str(e))
     except Exception as e:
         return ResourceUnavailableErrorResponse().response(message=str(e))
 

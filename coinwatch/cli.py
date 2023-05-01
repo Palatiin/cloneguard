@@ -1,4 +1,11 @@
-# cli.py
+#!/usr/bin/env python3
+
+# File: cli.py
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2022-09-28
+# Description: Command line interface of the detection tool
+
+
 from datetime import datetime as dt
 from typing import List, Tuple
 

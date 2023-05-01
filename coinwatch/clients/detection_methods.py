@@ -106,7 +106,7 @@ class BlockScope:
             if not applications:
                 patch_applications.append(())
                 continue
-            # select the one with the highest similarity
+            # select the one with the highest similarity, thus the highest confidence
             patch_applications.append(max(applications, key=lambda x: x[1]))
 
         logger.info(f"Applied patch: {patch_applications}", repo=repo.repo)

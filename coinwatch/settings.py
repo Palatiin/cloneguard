@@ -63,7 +63,7 @@ PG_HOST = os.getenv("PG_HOST", "host.docker.internal")
 PG_PORT = os.getenv("PG_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "postgres")
 
-REDIS_HOST = os.getenv("REDIS_HOST", "host.docker.internal")
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
 REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 
 SMTP_LOGIN = os.getenv("SMTP_LOGIN")

@@ -171,6 +171,10 @@ async def fetch_commit(data: ShowCommitSchema):
             project = Git(project)
 
             commit = project.show(data.commit, quiet=False, context=CONTEXT_LINES * 2)
+            if not commit:
+                raise NotFoundError("Commit not found.")
+        except NotFoundError as e:
+            raise e
         except Exception as e:
             raise InternalServerError(e)
 
@@ -178,9 +182,13 @@ async def fetch_commit(data: ShowCommitSchema):
             commit=data.commit,
             patch=base64.b64encode(commit.encode("utf-8")),
         )
+    except NotFoundError as e:
+        raise e
     except ValidationError as e:
         raise e
     except InternalServerError as e:
+        raise e
+    except Exception as e:
         raise e
 
 
@@ -189,26 +197,20 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
         if not data.bug_id or not data.commit or not data.patch:
             raise ValidationError("Missing value: bug_id or commit or patch")
 
-        try:
-            redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
-            queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
-            queue.enqueue(
-                execute_task,
-                data.bug_id,
-                data.commit,
-                data.patch,
-                data.method,
-                data.project_name,
-                data.date,
-                dt.now().timestamp(),
-            )
-
-        except Exception as e:
-            raise InternalServerError(e)
+        redis_conn = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://redis:6379"))
+        queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+        queue.enqueue(
+            execute_task,
+            data.bug_id,
+            data.commit,
+            data.patch,
+            data.method,
+            data.project_name,
+            data.date,
+            dt.now().timestamp(),
+        )
 
     except ValidationError as e:
-        raise e
-    except InternalServerError as e:
         raise e
     except Exception as e:
         raise e
@@ -224,23 +226,26 @@ async def get_status():
             raise Exception("No logs found")
 
         detections = []
-        for match in re.finditer(r"Applied\s*patch:\s*(\[.*?\])\s*repo=(\S+)\b", logs):
-            project = match.group(2)
-            results = orjson.loads(
-                match.group(1).replace("(", "[").replace(")", "]").replace("False", "false").replace("True", "true")
-            )
-            detections.extend(
-                [
-                    DetectionModel(
-                        project_name=project,
-                        vulnerable="False" if result[0] else "True",
-                        confidence=round(result[1], 3),
-                        location="",  # result[2],
-                    )
-                    for result in results
-                    if result
-                ]
-            )
+        try:
+            for match in re.finditer(r"Applied\s*patch:\s*(\[.*?\])\s*repo=(\S+)\b", logs):
+                project = match.group(2)
+                results = orjson.loads(
+                    match.group(1).replace("(", "[").replace(")", "]").replace("False", "false").replace("True", "true")
+                )
+                detections.extend(
+                    [
+                        DetectionModel(
+                            project_name=project,
+                            vulnerable="False" if result[0] else "True",
+                            confidence=round(result[1], 3),
+                            location="",  # result[2],
+                        )
+                        for result in results
+                        if result
+                    ]
+                )
+        except Exception as e:
+            raise InternalServerError(e)
 
         return DetectionStatusModel(
             logs=logs,
