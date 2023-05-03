@@ -31,7 +31,7 @@ class SimianDetection:
 
 
 class Simian:
-    simian_jar_path = "coinwatch/simian-2.5.10.jar"
+    simian_jar_path = "cloneguard/simian-2.5.10.jar"
     _re_duplicate_block = re.compile(r"Found.*?(?=Found)", flags=re.S)
     _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d*)\s*in\s*(.*?)\n")
 
