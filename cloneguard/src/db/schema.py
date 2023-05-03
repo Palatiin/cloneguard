@@ -1,4 +1,8 @@
-# schema.py
+# File: src/db/schema.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-19
+# Description: Database schema
 
 import json
 from typing import List
@@ -7,8 +11,6 @@ from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, Se
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
 from sqlalchemy.sql import func
-
-from coinwatch.src.db.declarative_base import SchemaBase
 
 Base = declarative_base()
 metadata = Base.metadata

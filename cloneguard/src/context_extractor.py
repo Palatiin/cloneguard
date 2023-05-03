@@ -1,14 +1,19 @@
-# context_extractor.py
+# File: src/context_extractor.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-02-13
+# Description: Implementation of component Extractor.
+# https://www.ndss-symposium.org/wp-content/uploads/2023/02/ndss2023_f222_paper.pdf
 
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from coinwatch.clients.git import Git
-from coinwatch.src.common import Filter, log_wrapper
-from coinwatch.src.errors import ContextExtractionError
-from coinwatch.src.szz.git_parser import GitParser
+from cloneguard.clients.git import Git
+from cloneguard.src.common import Filter, log_wrapper
+from cloneguard.src.errors import ContextExtractionError
+from cloneguard.src.szz.git_parser import GitParser
 
 
 @dataclass

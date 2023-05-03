@@ -1,9 +1,13 @@
-# patch_fetcher.py
+# File: src/patch_fetcher.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-13
+# Description: Implementation of class PatchCode - fetching and parsing patch content.
 
 from enum import Enum
 from typing import List
 
-from coinwatch.src.common import Filter
+from cloneguard.src.common import Filter
 
 
 class PatchType(int, Enum):

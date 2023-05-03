@@ -1,4 +1,8 @@
-# common.py
+# File: src/common.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-19
+# Description: Implementation of line/file filters and logging decorator.
 
 import os
 import re

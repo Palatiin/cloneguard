@@ -1,11 +1,12 @@
 # File: api/detection.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: Detection method execution API
 
 from fastapi import APIRouter, Path
 
-from coinwatch.api.models import (
+from cloneguard.api.models import (
     DetectionExecutedResponse,
     DetectionStatusResponse,
     InternalServerError,
@@ -21,8 +22,8 @@ from coinwatch.api.models import (
     NotFoundErrorResponse,
     DetectionStatusModel,
 )
-from coinwatch.api.schemas import DetectionMethodExecutionSchema, SearchRequestSchema, ShowCommitSchema
-from coinwatch.src.async_interface import execute_detection_method, get_status, search_bugs, fetch_commit
+from cloneguard.api.schemas import DetectionMethodExecutionSchema, SearchRequestSchema, ShowCommitSchema
+from cloneguard.src.async_interface import execute_detection_method, get_status, search_bugs, fetch_commit
 
 router = APIRouter(
     prefix="/api/v1/detection",

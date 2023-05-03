@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 # File: cli.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2022-09-28
 # Description: Command line interface of the detection tool
@@ -12,19 +13,19 @@ from typing import List, Tuple
 import click
 import structlog
 
-import coinwatch.src.db.crud as crud
-from coinwatch.clients.detection_methods import BlockScope, Simian
-from coinwatch.clients.git import Git
-from coinwatch.src.comparator import Comparator
-from coinwatch.src.context_extractor import Context, Extractor
-from coinwatch.src.cve_reader import load_references
-from coinwatch.src.db.schema import Bug
-from coinwatch.src.db.session import DBSession, db_session
-from coinwatch.src.fixing_commits import FixCommitFinder
-from coinwatch.src.notifications import Postman
-from coinwatch.src.patch_fetcher import PatchCode
-from coinwatch.src.searcher import Searcher
-from coinwatch.src.update_repos import get_repo_objects, update_repos
+import cloneguard.src.db.crud as crud
+from cloneguard.clients.detection_methods import BlockScope, Simian
+from cloneguard.clients.git import Git
+from cloneguard.src.comparator import Comparator
+from cloneguard.src.context_extractor import Context, Extractor
+from cloneguard.src.cve_reader import load_references
+from cloneguard.src.db.schema import Bug
+from cloneguard.src.db.session import DBSession, db_session
+from cloneguard.src.fixing_commits import FixCommitFinder
+from cloneguard.src.notifications import Postman
+from cloneguard.src.patch_fetcher import PatchCode
+from cloneguard.src.searcher import Searcher
+from cloneguard.src.update_repos import get_repo_objects, update_repos
 
 logger = structlog.get_logger(__name__)
 
@@ -157,8 +158,8 @@ def scanner():
 
 @cli.command()
 def db_init():
-    from coinwatch.src.db.session import DBSchemaSetup, db_session
-    from coinwatch.utils.db_init import init
+    from cloneguard.src.db.session import DBSchemaSetup, db_session
+    from cloneguard.utils.db_init import init
 
     with DBSchemaSetup():
         init(db_session)
@@ -212,7 +213,7 @@ def test():
     logger.info("Test Context Extractor")
     from tests.test_context_extraction import test_list_context_extraction, test_patch_exception
 
-    from coinwatch.src.errors import ContextExtractionError
+    from cloneguard.src.errors import ContextExtractionError
 
     for i, test_case in enumerate(test_list_context_extraction):
         logger.info(f"================ Test {i:2} ================")
@@ -255,7 +256,7 @@ def test_blockscope():
         result = bs.run(target)
         return result
 
-    from coinwatch.tests.test_blockscope import test_cases
+    from cloneguard.tests.test_blockscope import test_cases
 
     logger.info("================ Test BS ================")
     for repo, bug, target, date, expected_result in test_cases:

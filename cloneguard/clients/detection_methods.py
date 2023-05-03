@@ -1,4 +1,8 @@
-# simian.py
+# File: clients/detection_method.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-26
+# Description: Implementation of detection method components.
 
 import base64
 import os
@@ -9,16 +13,16 @@ from typing import List
 
 import structlog
 
-import coinwatch.src.db.crud as crud
-from coinwatch.clients.git import Git
-from coinwatch.settings import CONTEXT_LINES
-from coinwatch.src.common import log_wrapper
-from coinwatch.src.comparator import Comparator
-from coinwatch.src.context_extractor import Extractor
-from coinwatch.src.db.schema import Bug, Detection
-from coinwatch.src.db.session import db_session
-from coinwatch.src.patch_fetcher import PatchCode
-from coinwatch.src.searcher import Searcher
+import cloneguard.src.db.crud as crud
+from cloneguard.clients.git import Git
+from cloneguard.settings import CONTEXT_LINES
+from cloneguard.src.common import log_wrapper
+from cloneguard.src.comparator import Comparator
+from cloneguard.src.context_extractor import Extractor
+from cloneguard.src.db.schema import Bug, Detection
+from cloneguard.src.db.session import db_session
+from cloneguard.src.patch_fetcher import PatchCode
+from cloneguard.src.searcher import Searcher
 
 logger = structlog.get_logger()
 

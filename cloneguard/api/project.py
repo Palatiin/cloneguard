@@ -1,23 +1,23 @@
 # File: api/project.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: Projects table API
 
 from fastapi import APIRouter
 
-import coinwatch.src.db.crud as crud
-from coinwatch.api.models import (
+import cloneguard.src.db.crud as crud
+from cloneguard.api.models import (
     MultiProjectResponse,
-    NotFoundErrorResponse,
     ProjectModel,
     ProjectResponse,
     ResourceUnavailableErrorResponse,
     ValidationError,
     ValidationErrorResponse,
 )
-from coinwatch.api.schemas import NewProjectSchema
-from coinwatch.src.async_interface import register_project
-from coinwatch.src.db.session import db_session
+from cloneguard.api.schemas import NewProjectSchema
+from cloneguard.src.async_interface import register_project
+from cloneguard.src.db.session import db_session
 
 router = APIRouter(
     prefix="/api/v1/project",

@@ -1,3 +1,9 @@
+# File: tests/test_context_extraction.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-02-13
+# Description: Tests for patch context extraction.
+
 test_patch = """
 a_len = a_len or 0
 b_len = b_len or 0

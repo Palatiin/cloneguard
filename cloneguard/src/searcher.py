@@ -1,19 +1,23 @@
-# searcher.py
+# File: src/searcher.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-13
+# Description: Implementation of component Searcher - searching for candidate code.
+# https://www.ndss-symposium.org/wp-content/uploads/2023/02/ndss2023_f222_paper.pdf
 
 import multiprocessing
 import re
-from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Tuple
 
 import structlog
 
-from coinwatch.clients.git import Git
-from coinwatch.settings import CONTEXT_LINES
-from coinwatch.src.common import Filter, log_wrapper
-from coinwatch.src.comparator import Comparator
-from coinwatch.src.context_extractor import Context
-from coinwatch.src.schemas import CandidateCode, Sentence, TargetContext
+from cloneguard.clients.git import Git
+from cloneguard.settings import CONTEXT_LINES
+from cloneguard.src.common import Filter, log_wrapper
+from cloneguard.src.comparator import Comparator
+from cloneguard.src.context_extractor import Context
+from cloneguard.src.schemas import CandidateCode, Sentence, TargetContext
 
 
 class Searcher:

@@ -1,9 +1,13 @@
-# db_init.py
+# File: utils/db_init.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-19
+# Description: Database initialization script.
 
 from datetime import datetime as dt
 
-import coinwatch.src.db.crud as crud
-from coinwatch.src.db.schema import *
+import cloneguard.src.db.crud as crud
+from cloneguard.src.db.schema import *
 
 
 def init(db):

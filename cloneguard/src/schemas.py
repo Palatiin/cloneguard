@@ -1,4 +1,8 @@
-# schemas.py
+# File: src/schemas.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2022-08-08
+# Description: Dataclasses for CVEs and other entities.
 
 import datetime
 from dataclasses import dataclass, field

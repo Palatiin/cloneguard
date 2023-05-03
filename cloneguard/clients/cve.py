@@ -1,6 +1,9 @@
-# cve.py
+# File: src/clients/cve.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2022-08-08
+# Description: Client for CVE API.
 
-import datetime
 import json
 import os
 import re
@@ -10,9 +13,9 @@ from typing import Dict, NoReturn, Optional
 import requests
 import structlog
 
-from coinwatch.settings import CACHE_PATH
-from coinwatch.src.common import log_wrapper
-from coinwatch.src.schemas import *
+from cloneguard.settings import CACHE_PATH
+from cloneguard.src.common import log_wrapper
+from cloneguard.src.schemas import *
 
 logger = structlog.get_logger(__name__)
 

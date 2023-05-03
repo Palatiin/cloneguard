@@ -1,15 +1,19 @@
-# cve_reader.py
+# File: src/cve_reader.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2022-08-08
+# Description: CVE references reader implementation.
 
 import base64
 import re
-from typing import List, NoReturn
+from typing import NoReturn
 
 import structlog
 
-from coinwatch.clients.git import Git
-from coinwatch.settings import USER_AGENT
-from coinwatch.src.common import log_wrapper
-from coinwatch.src.schemas import *
+from cloneguard.clients.git import Git
+from cloneguard.settings import USER_AGENT
+from cloneguard.src.common import log_wrapper
+from cloneguard.src.schemas import *
 
 __all__ = ["load_references"]
 

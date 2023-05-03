@@ -1,11 +1,12 @@
 # File: api/schemas.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: API payload schemas
 
 from pydantic import Field
 
-from coinwatch.api.models import CGApiModel
+from cloneguard.api.models import CGApiModel
 
 
 class NewProjectSchema(CGApiModel):

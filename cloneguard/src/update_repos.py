@@ -1,10 +1,14 @@
-# update_repos.py
+# File: src/update_repos.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-13
+# Description: Functions for fetching registered repositories and updating them.
 
 from typing import List, Optional
 
-import coinwatch.src.db.crud as crud
-from coinwatch.clients.git import Git
-from coinwatch.src.db.session import db_session
+import cloneguard.src.db.crud as crud
+from cloneguard.clients.git import Git
+from cloneguard.src.db.session import db_session
 
 
 def get_repo_objects(source: Git) -> List[Git]:

@@ -1,6 +1,8 @@
-# session.py
-
-from typing import Generator
+# File: src/db/session.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-19
+# Description: Database session setup.
 
 import structlog
 from sqlalchemy import create_engine, text
@@ -8,8 +10,8 @@ from sqlalchemy.engine.base import Engine
 from sqlalchemy.ext.declarative import DeclarativeMeta, declarative_base
 from sqlalchemy.orm import scoped_session, sessionmaker
 
-from coinwatch import settings
-from coinwatch.src.db.schema import Base
+from cloneguard import settings
+from cloneguard.src.db.schema import Base
 
 logger = structlog.get_logger(__name__)
 

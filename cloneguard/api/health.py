@@ -1,11 +1,12 @@
 # File: api/health.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: Health check API
 
 from fastapi import APIRouter
 
-from coinwatch.api.models import Pong
+from cloneguard.api.models import Pong
 
 router = APIRouter(
     prefix="/api/v1",

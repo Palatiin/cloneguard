@@ -1,3 +1,9 @@
+# File: tests/test_blockscope.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-04-18
+# Description: Tests for context-based clone detection approach of BlockScope.
+
 # test_blockscope.py
 
 # All results are from 'master' branch, True = patch applied, False = still vulnerable

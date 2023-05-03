@@ -1,3 +1,10 @@
+# File: src/decorators.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-13
+# Description: Implementation of component Comparator.
+# https://www.ndss-symposium.org/wp-content/uploads/2023/02/ndss2023_f222_paper.pdf
+
 # comparator.py
 import multiprocessing
 from enum import Enum
@@ -5,9 +12,9 @@ from typing import List
 
 from similarity.normalized_levenshtein import NormalizedLevenshtein  # noqa
 
-from coinwatch.settings import REWARD, THRESHOLD
-from coinwatch.src.patch_fetcher import PatchCode, PatchType
-from coinwatch.src.schemas import CandidateCode
+from cloneguard.settings import REWARD, THRESHOLD
+from cloneguard.src.patch_fetcher import PatchCode, PatchType
+from cloneguard.src.schemas import CandidateCode
 
 
 class TypeOfPatch(int, Enum):

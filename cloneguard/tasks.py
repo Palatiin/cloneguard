@@ -1,4 +1,5 @@
 # File: tasks.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-28
 # Description: Worker tasks
@@ -9,12 +10,12 @@ import structlog
 
 from copy import deepcopy
 
-import coinwatch.src.db.crud as crud
-from coinwatch.clients.detection_methods import Simian, BlockScope
-from coinwatch.clients.git import Git
-from coinwatch.src.db.session import db_session
-from coinwatch.src.update_repos import get_repo_objects, update_repos
-import coinwatch.settings as settings
+import cloneguard.src.db.crud as crud
+from cloneguard.clients.detection_methods import Simian, BlockScope
+from cloneguard.clients.git import Git
+from cloneguard.src.db.session import db_session
+from cloneguard.src.update_repos import get_repo_objects, update_repos
+import cloneguard.settings as settings
 
 logger = structlog.get_logger(__name__)
 

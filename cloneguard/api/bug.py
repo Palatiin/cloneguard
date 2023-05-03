@@ -1,12 +1,13 @@
 # File: api/bug.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: Bug table API
 
 from fastapi import APIRouter, Path
 
-import coinwatch.src.db.crud as crud
-from coinwatch.api.models import (
+import cloneguard.src.db.crud as crud
+from cloneguard.api.models import (
     BugModel,
     BugResponse,
     MultiBugResponse,
@@ -16,9 +17,9 @@ from coinwatch.api.models import (
     ValidationError,
     ValidationErrorResponse,
 )
-from coinwatch.api.schemas import UpdateBugSchema
-from coinwatch.src.async_interface import update_bug
-from coinwatch.src.db.session import db_session
+from cloneguard.api.schemas import UpdateBugSchema
+from cloneguard.src.async_interface import update_bug
+from cloneguard.src.db.session import db_session
 
 router = APIRouter(
     prefix="/api/v1/bug",

@@ -1,4 +1,8 @@
-# git_parser.py
+# File: src/git_parser.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-02-04
+# Description: Git parser for parsing git diff and git annotate output.
 
 import re
 from typing import List

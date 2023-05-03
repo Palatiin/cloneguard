@@ -1,17 +1,18 @@
 # File: api/models.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-04-26
 # Description: API models
 
 from enum import Enum
-from typing import List, Optional, Union
+from typing import List, Union
 
 import orjson
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from coinwatch.errors import *
-from coinwatch.version import VERSION
+from cloneguard.errors import *
+from cloneguard.version import VERSION
 
 BaseModel.__dict__["__init__"].__doc__ = ""
 

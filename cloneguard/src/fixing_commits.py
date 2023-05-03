@@ -1,40 +1,8 @@
-# fixing_commits.py
-"""
-List of possible improvements.
-
-Ideas:
-    * implement generic approaches for issues and pulls
-        * class Issue
-            * check for cve reference, keywords, on pass -> search for reference to PR
-            * reference to pull -> transform to Pull obj
-        * class Pull
-            * attr initialization origin - issue#, if issue ref -> select fix commit
-            * without issue ref - title, body scan for cve reference, keywords
-                * if none, search for Issue references
-                * search for CVE ref / keywords in Issue, on match -> select fix commit
-
-        * class ReleaseNotes
-            * source of pull# / commit-sha -> PRIMARY
-                * check desc for cve ref / keywords -> select commit# if mentioned
-                * Pull object without initialization origin, -> select fix commit or continue to next in change log
-            * source of tag range <v -1, release note ver> -> SECONDARY
-
-    * how to differ issue# from pull#
-        * every pull# can be found at /issue & /pull endpoint
-        * issue# can be found only at /issue endpoint
-        ==> if # doesn't have /pull ep data -> Issue
-
-    * modify keyword extraction params
-        * currently extracting key phrases
-        * mark every noun as keyword ??
-
-    * extract versions from release notes - DONE
-    * extract versions from cve description
-
-    * return list of bug fixing commits - DONE
-
-    CVE.json["configurations"] - extract affected project versions
-"""
+# File: src/fixing_commits.py
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2022-11-15
+# Description: Implementation of component FixCommitFinder.
 
 import datetime as dt
 import json
@@ -44,14 +12,14 @@ from typing import List, Optional, Set
 import nltk
 import structlog
 
-import coinwatch.src.db.crud as crud
-from coinwatch.clients.cve import CVEClient
-from coinwatch.clients.git import Git
-from coinwatch.src.common import log_wrapper
-from coinwatch.src.cve_reader import load_references
-from coinwatch.src.db.schema import Bug
-from coinwatch.src.db.session import db_session
-from coinwatch.src.schemas import CVE, ReferenceType
+import cloneguard.src.db.crud as crud
+from cloneguard.clients.cve import CVEClient
+from cloneguard.clients.git import Git
+from cloneguard.src.common import log_wrapper
+from cloneguard.src.cve_reader import load_references
+from cloneguard.src.db.schema import Bug
+from cloneguard.src.db.session import db_session
+from cloneguard.src.schemas import CVE, ReferenceType
 
 # CANDIDATES_LIMIT = 100
 
