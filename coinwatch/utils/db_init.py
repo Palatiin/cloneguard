@@ -32,9 +32,7 @@ def init(db):
     )
     bug = crud.bug.create(
         db,
-        Bug(
-            id=1, cve_id="CVE-2018-17144", fix_commit='["d1dee205473140aca34180e5de8b9bbe17c2207d"]', project=project.id
-        ),
+        Bug(id=1, cve_id="CVE-2018-17144", fix_commit='["d1dee20547"]', project=project.id),
     )
     detection = crud.detection.create(
         db, Detection(id=1, created=dt.now(), confidence=1.0, bug=bug.id, project=child.id)

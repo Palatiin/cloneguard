@@ -16,6 +16,11 @@ strsim = "^0.0.3"
 structlog = "^22.3"
 sqlalchemy = "^2.0.6"
 psycopg2-binary = "^2.9.5"
+fastapi = "^0.95.1"
+orjson = "^3.8.10"
+uvicorn = "^0.21.1"
+redis = "^4.5.4"
+rq = "^1.13.0"
 
 [build-system]
 requires = ["poetry-core"]

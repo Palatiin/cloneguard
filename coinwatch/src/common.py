@@ -2,17 +2,61 @@
 
 import os
 import re
+from pathlib import Path
 
 import structlog
 
 
 class Filter(object):
+    extensions = {"py", "c", "cpp", "go", "h", "hpp"}
     _re_lang_comment = {
         "py": r'\s*(#|""").*?{}',
         "c": r"\s*(/\*|//|/\*\*).*?{}",
+        "h": r"\s*(/\*|//|/\*\*).*?{}",
         "cpp": r"\s*(/\*|//|/\*\*).*?{}",
+        "hpp": r"\s*(/\*|//|/\*\*).*?{}",
+        "go": r"\s*(//|/\*).*?{}",
+        "hs": r"\s*(--|{-).*?{}",
     }
-    _re_brackets = re.compile(r"\s*[\[\](){}]\s*;?")
+    _re_brackets = re.compile(r"\s*[\[\](){}]+\s*(?:[;,]\s*)?$")
+    __c_keywords = {
+        "auto",
+        "bool",
+        "char",
+        "const",
+        "false",
+        "float",
+        "int",
+        "long",
+        "return",
+        "short",
+        "signed",
+        "unsigned",
+        "void",
+    }
+    _lang_frequent_keywords = {
+        "py": {
+            "and",
+            "as",
+            "break",
+            "elif",
+            "else",
+            "False",
+            "for",
+            "if",
+            "in",
+            "not",
+            "or",
+            "return",
+            "True",
+            "while",
+        },
+        "c": __c_keywords,
+        "cpp": __c_keywords,
+        "h": __c_keywords,
+        "hpp": __c_keywords,
+        "go": {"uint64", "var"},
+    }
 
     @classmethod
     def line(cls, line: str, filename: str = "", file_ext: str = "", keyword: str = "") -> bool:
@@ -24,8 +68,9 @@ class Filter(object):
         )
 
     @classmethod
-    def file(cls, filename: str, file_ext: str) -> bool:
-        return cls._in_test(filename) | bool(file_ext not in cls._re_lang_comment.keys())
+    def file(cls, filename: str, file_ext: str = None) -> bool:
+        file_ext = file_ext or Path(filename).suffix[1:]
+        return cls._in_test(filename) | bool(file_ext not in cls.extensions)
 
     @staticmethod
     def _in_test(filename: str) -> bool:

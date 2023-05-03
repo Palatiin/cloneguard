@@ -5,7 +5,7 @@ import json
 import os
 import re
 from collections import defaultdict
-from typing import Dict, List, NoReturn, Optional
+from typing import Dict, NoReturn, Optional
 
 import requests
 import structlog

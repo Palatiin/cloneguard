@@ -1,6 +1,7 @@
 # crud.py
 
 import typing as t
+from typing import List
 
 from sqlalchemy.orm import Session
 
@@ -24,21 +25,13 @@ class CRUDBase(t.Generic[ModelType]):
         return obj
 
     def get(self, db: Session, id_: int) -> t.Optional[ModelType]:
-        return db.query(self.model).filter(self.model.id == id_).first()
+        return db.query(self.model).filter_by(id=id_).first()
 
     def get_all(self, db: Session) -> t.List[ModelType]:
         return db.query(self.model).all()
 
-    def update(self, db: Session, db_obj: ModelType, obj_new: ModelType) -> ModelType:  # noqa
-        obj_new = obj_new.__dict__
-        for field in obj_new.keys():
-            if field[0] == "_" or isinstance(obj_new[field], list):
-                continue
-            setattr(db_obj, field, obj_new[field])
-
-        db.add(db_obj)
+    def update(self, db: Session, db_obj: ModelType) -> ModelType:  # noqa
         db.commit()
-        db.refresh(db_obj)
         return db_obj
 
     def delete(self, db: Session, obj: ModelType) -> t.Optional[ModelType]:  # noqa
@@ -49,22 +42,34 @@ class CRUDBase(t.Generic[ModelType]):
 
 class CRUDBug(CRUDBase[Bug]):
     def get_cve(self, db: Session, cve: str) -> t.Optional[ModelType]:
-        return db.query(self.model).filter(self.model.cve_id == cve).first()
+        return db.query(self.model).filter_by(cve_id=cve).first()
 
     def get_verified(self, db: Session, verified: bool) -> t.List[ModelType]:
-        return db.query(self.model).filter(self.model.verified == verified).all()
+        return db.query(self.model).filter_by(verified=verified).all()
 
 
 class CRUDProject(CRUDBase[Project]):
     def get_by_name(self, db: Session, name: str) -> t.Optional[ModelType]:
-        return db.query(self.model).filter(self.model.name == name).first()
+        return db.query(self.model).filter_by(name=name).first()
 
     def get_all_clones(self, db: Session, source: ModelType) -> t.List[ModelType]:
-        return db.query(self.model).filter(self.model.parent_id == source.id).all()
+        return db.query(self.model).filter_by(parent_id=source.id).all()
+
+    def get_all_watched(self, db: Session) -> t.List[ModelType]:
+        return db.query(self.model).filter_by(watch=True).all()
 
 
 class CRUDDetection(CRUDBase[Detection]):
-    ...
+    def create(self, db: Session, obj: ModelType) -> ModelType:
+        if _obj := self.get_by_bug_and_project_id(db, obj.bug, obj.project):
+            return _obj
+        return super().create(db, obj)
+
+    def get_by_bug_and_project_id(self, db: Session, bug_id: int, project_id: int):
+        return db.query(self.model).filter_by(bug=bug_id, project=project_id).first()
+
+    def get_all_after(self, db: Session, timestamp: int) -> List[ModelType]:
+        return db.query(self.model).filter(self.model.created > timestamp).all()
 
 
 bug = CRUDBug(Bug)

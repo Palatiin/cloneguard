@@ -14,31 +14,31 @@ class PatchType(int, Enum):
 
 
 class PatchCode:
-    deletions: int = 0
-    additions: int = 0
-    type: PatchType = PatchType.NDF
-    code: List[str] = []
-    code_deletions: List[str] = []
-    code_additions: List[str] = []
-
-    def __init__(self, patch: List[str]):
-        self.patch = patch
+    def __init__(self, patch: str | List[str]):
+        self.patch: List[str] = patch.splitlines() if isinstance(patch, str) else patch
+        self.deletions: int = 0
+        self.additions: int = 0
+        self.type: PatchType = PatchType.NDF
+        self.code: List[str] = []
+        self.code_deletions: List[str] = []
+        self.code_additions: List[str] = []
 
     def fetch(self):
         """Fetch code from patch."""
         additions, deletions = 0, 0
         for line in self.patch:
             line = line.strip()
-            if Filter.line(line):
+            _line = line[1:].strip() if line.startswith("-") or line.startswith("+") else line
+            if Filter.line(_line):
                 continue
             if line.startswith("-"):
                 deletions += 1
-                self.code_deletions.append(line[1:].strip())
-                self.code.append(line[1:].strip())
+                self.code_deletions.append(_line)
+                self.code.append(_line)
             elif line.startswith("+"):
                 additions += 1
-                self.code_additions.append(line[1:].strip())
-                self.code.append(line[1:].strip())
+                self.code_additions.append(_line)
+                self.code.append(_line)
 
         patch_type: PatchType = PatchType.NDF
         if deletions and not additions:

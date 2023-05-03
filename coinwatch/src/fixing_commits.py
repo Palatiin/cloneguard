@@ -36,20 +36,22 @@ Ideas:
     CVE.json["configurations"] - extract affected project versions
 """
 
+import datetime as dt
 import json
 import re
-from datetime import timedelta
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import nltk
+import structlog
 
 import coinwatch.src.db.crud as crud
 from coinwatch.clients.cve import CVEClient
 from coinwatch.clients.git import Git
 from coinwatch.src.common import log_wrapper
 from coinwatch.src.cve_reader import load_references
+from coinwatch.src.db.schema import Bug
 from coinwatch.src.db.session import db_session
-from coinwatch.src.schemas import *
+from coinwatch.src.schemas import CVE, ReferenceType
 
 # CANDIDATES_LIMIT = 100
 
@@ -65,14 +67,20 @@ class FixCommitFinder:
         "default",
     ]
 
+    IGNORED_COMMITS = ["test", "ci", "doc"]
+
     _res = {
         "release_notes": {
             "change_log_1": re.compile(r"#(\d+)\s*`(\w+)`\s*(.*)"),
         },
         "default": {
-            "keyword": re.compile(r"[Ff]ix|[Bb]ug"),
+            "keyword": re.compile(r"fix|\bbug|CVE-\d+|CWE-\d+", flags=re.IGNORECASE),
             "issue": re.compile(r"issue\s*#(\d+)\b"),
         },
+        "merge_commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
+        "commit": re.compile(r"(\w{40}) +(.+)"),
+        "commit_message": re.compile(r"([\w-]+): .+"),
+        "cwe": re.compile(r"DOS|overflow|underflow|race|deadlock|infinite|leak|insecure|bypass"),
     }
 
     _keyword_count = 10
@@ -86,33 +94,100 @@ class FixCommitFinder:
             cve (str): searched CVE identifier
             cache (bool): use cached data in DB
         """
+        self.logger = structlog.get_logger(__name__)
+
         if not cve:
             self.repo = repo
             return
-        self.stored_cve = self.check_db(cve) if cache else None
-        if self.stored_cve:
+        self.stored_cve = self.check_db(cve)
+        if cache and self.stored_cve:
+            return
+        if "PR#" in cve:
             return
 
         self.cve: CVE = CVEClient().cve_id(cve)
         load_references(repo, self.cve.references)
-        self.issue = [ref for ref in self.cve.references if ref.type_ == ReferenceType.issue]
-        self.pull = [ref for ref in self.cve.references if ref.type_ == ReferenceType.pull]
-        self.release_notes = [ref for ref in self.cve.references if ref.type_ == ReferenceType.release_notes]
+        self.commit, self.issue, self.pull, self.release_notes = [], [], [], []
+        self._categorize_references()
         self.repo = repo
-        self.cve_keywords: List[str] = self._extract_keywords(self.cve.descriptions["en"][0])
+        self.cve_keywords: Set[str] = self._extract_keywords(self.cve.descriptions["en"][0])
 
-    def _extract_keywords(self, text: str, lang: str = "english") -> List[str]:
+    def _categorize_references(self):
+        for ref in self.cve.references:
+            match ref.type_:
+                case ReferenceType.commit:
+                    self.commit.append(ref)
+                case ReferenceType.issue:
+                    self.issue.append(ref)
+                case ReferenceType.pull:
+                    self.pull.append(ref)
+                case ReferenceType.release_notes:
+                    self.release_notes.append(ref)
+
+    def _extract_keywords(self, text: str, lang: str = "english") -> Set[str]:
         kwords = nltk.word_tokenize(text, language=lang)
         kwords = nltk.pos_tag(kwords)
         kwords = [x for x in kwords if x[1][:2] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower()]
-        return [kw[0] for kw in kwords]
+        return set([kw[0] for kw in kwords])
+
+    def get_bug(self) -> Bug | None:
+        fix_commits = self.get_fix_commit()
+        if not fix_commits:
+            return None
+
+        if not self.stored_cve:
+            bug = Bug(cve_id=self.cve.id_ if self.cve else "SCAN", project=self.repo.id)
+            bug.commits = fix_commits
+            self.stored_cve = crud.bug.create(db_session, bug)
+        elif not self.stored_cve.commits:
+            self.stored_cve.commits = fix_commits
+            crud.bug.update(db_session, self.stored_cve)
+
+        return self.stored_cve
+
+    def scan_recent(self):
+        def ignore_commit(_commit):
+            if match := self._res["commit_message"].match(_commit.strip()):
+                if match.group(1) in self.IGNORED_COMMITS:
+                    return True
+            return False
+
+        time_window = dt.datetime.now() - dt.timedelta(days=3)  # TODO: just tmp 3 days
+        recent_commits = self.repo.rev_list(after=time_window.strftime("%Y-%m-%d"))
+
+        candidates = []
+        for _hash, commit in recent_commits:
+            commit_parts = commit.split("\n\n")
+
+            if (keyword_1 := self._res["default"]["keyword"].search(commit)) or (
+                keyword_2 := self._res["cwe"].search(commit)
+            ):
+                keyword = (keyword_1 or keyword_2).group(0)
+                self.logger.info(f"scan_recent: Matched {keyword=}.")
+                if commit_parts[1].strip().startswith("Merge"):
+                    for line in self._res["commit"].finditer(commit):
+                        if not ignore_commit(line.group(2)):
+                            candidates.append(line.group(1))
+                elif self._res["commit_message"].match(commit_parts[1]):
+                    if not ignore_commit(commit_parts[1]):
+                        candidates.append(_hash)
+                else:
+                    candidates.append(_hash)
+
+        return candidates
 
     @log_wrapper
     def get_fix_commit(self) -> List[str]:
         if self.stored_cve:
-            return json.loads(self.stored_cve.fix_commit)
+            if self.stored_cve.commits:
+                return self.stored_cve.commits
+        if not self.cve:
+            return self.scan_recent()
 
         fix_commits = []
+
+        if self.commit:
+            return [self.commit[0].json["id"]]
 
         # ISSUE SCAN
         if self.issue:
@@ -180,18 +255,16 @@ class FixCommitFinder:
 
         # sort by information value
         change_log = sorted(change_log, key=lambda x: x[3], reverse=True)
-        _change_log = list(filter(lambda x: x[3] > 0, change_log))
-        change_log = _change_log or change_log
+        # _change_log = list(filter(lambda x: x[3] > 0, change_log))
+        # change_log = _change_log or change_log
 
-        commits = []
-        for log in change_log:
-            commits.extend(log[4])
+        commits = [commit["sha"] for log in change_log for commit in log[4]]
 
         return commits  # self._select_commit(change_log[0][4])
 
     def default_scan(self) -> List[str]:
-        _after = f"{self.cve.published - timedelta(days=10):%Y-%m-%d}"
-        _before = f"{self.cve.published + timedelta(days=2):%Y-%m-%d}"
+        _after = f"{self.cve.published - dt.timedelta(days=10):%Y-%m-%d}"
+        _before = f"{self.cve.published + dt.timedelta(days=2):%Y-%m-%d}"
         candidate_commits = {"count": 0, "commits": []}
 
         for _hash, commit in self.repo.rev_list(after=_after, before=_before, tag_range=get_tag_range(self.cve)):
@@ -209,7 +282,7 @@ class FixCommitFinder:
 
         commits = sorted(candidate_commits["commits"], key=lambda x: x[1], reverse=True)
         # TODO: if 'Merge' in commit, pull scan?
-        return commits  # commits[0][0]
+        return [commit[0] for commit in commits]
 
     @staticmethod
     def check_db(cve: str):

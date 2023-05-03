@@ -37,7 +37,8 @@ return annotated
 test_patch2 = """
 AssertLockHeld(cs_main);
 assert(pindex);
-assert((pindex->phashBlock == nullptr) || (*pindex->phashBlock == block.GetHash()));
+assert((pindex->phashBlock == nullptr) ||
+    (*pindex->phashBlock == block.GetHash()));
 int64_t nTimeStart = GetTimeMicros();
 - if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck, !fJustCheck))
 + if (!CheckBlock(block, state, chainparams.GetConsensus(), !fJustCheck, !fJustCheck)) {
@@ -62,6 +63,14 @@ int64_t nTimeStart = GetTimeMicros();
 +        }
          return error("%s: Consensus::CheckBlock: %s", __func__, FormatStateMessage(state));
 uint256 hashPrevBlock = pindex->pprev == nullptr ? uint256() : pindex->pprev->GetBlockHash();
+assert(hashPrevBlock == view.GetBestBlock());
+if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
+if (!fJustCheck)
+"""
+
+test_patch_exception = """
+return error("%s: Consensus::CheckBlock: %s", __func__, ...);
+uint256 hashPrevBlock = pindex->pprev == nullptr ? uint256() : ...;
 assert(hashPrevBlock == view.GetBestBlock());
 if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
 if (!fJustCheck)

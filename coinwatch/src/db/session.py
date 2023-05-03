@@ -1,5 +1,7 @@
 # session.py
 
+from typing import Generator
+
 import structlog
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine.base import Engine

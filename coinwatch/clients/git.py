@@ -33,6 +33,7 @@ class Git:
     def __init__(self, project: str | Project):
         project = project if isinstance(project, Project) else crud.project.get_by_name(db_session, project)
 
+        self.id = project.id
         self.url = project.url
         self.owner = project.author
         self.repo = project.name
@@ -90,8 +91,11 @@ class Git:
         for _hash in hashes:
             yield _hash, self.show(_hash, quiet=True)
 
-    def show(self, _hash: str, quiet: Optional[bool] = True) -> str:
-        command = ["git", "show", "--quiet" if quiet else "", "--date=iso", _hash]
+    def show(self, _hash: str, quiet: Optional[bool] = True, context: int = 0) -> str:
+        command = ["git", "show", "--date=iso"]
+        command += ["--quiet"] if quiet else []
+        command += [f"-U{context}"] if context else []
+        command += [_hash]
         logger.info("git: show: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         return process.stdout.decode(errors="replace")
@@ -107,10 +111,10 @@ class Git:
         command = ["git", "annotate", commit, "--", path]
         logger.info("git: annotate: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
-        return process.stdout.decode(errors="replace").split("\n")
+        return process.stdout.decode(errors="replace").splitlines()
 
-    def grep(self, pattern: str) -> Generator:
-        command = ["git", "grep", "-n", pattern]
+    def grep(self, pattern: str, files: str) -> Generator:
+        command = ["git", "grep", "-n", f"\\b{pattern}\\b", "--", files]
         logger.info("git: grep: Command: " + " ".join(command), repo=self.repo)
         process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
         for occurrence in process.stdout.decode(errors="replace").splitlines():
@@ -121,15 +125,28 @@ class Git:
             lines = file.readlines()
         return lines
 
+    def checkout(self, branch: str = "master"):
+        command = ["git", "checkout", branch]
+        logger.info("git: checkout: Command: " + " ".join(command), repo=self.repo)
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
+        if process.returncode == 0 or branch != "master":
+            return
+        # else try 'main'
+
+        command = ["git", "checkout", "main"]
+        logger.info("git: checkout: Command: " + " ".join(command), repo=self.repo)
+        subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
     def sync(self) -> NoReturn:
         """Sync with remote repository."""
-        command = ["git", "checkout", "master"]
-        logger.info("git: sync: Command: " + " ".join(command), repo=self.repo)
-        subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+        self.checkout()
 
         command = ["git", "pull"]
         logger.info("git: sync Command: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
+
+        self.checkout()  # digibyte automatically switches to branch `develop`
 
     def get_version_from_date(self, date: str) -> NoReturn:
         rev_list = self.rev_list(before=date)
