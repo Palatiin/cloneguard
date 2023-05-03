@@ -1,18 +1,44 @@
-import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import Header from './components/Header';
-import Content from './components/Content';
-/*import Footer from './components/Footer';*/
-import './styles.css';
+import logo from './logo.svg';
+import './App.css';
+import {BrowserRouter, Route, Routes} from "react-router-dom";
+import Overview from "./component/pages/Overview";
+import TopBar from "./component/TopBar";
+import {Box, Container} from "@mui/material";
+import {createTheme, ThemeProvider} from "@mui/material/styles";
+import CssBaseline from '@mui/material/CssBaseline';
+import PrepareDetection from "./component/pages/PrepareDetection";
+import DetectionResult from "./component/pages/DetectionResult";
+import {ToastContainer} from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
+const theme = createTheme({
+    palette: {
+    }
+})
 
 function App() {
     return (
-        <Router>
-            <Header />
-            <Content />
-            {/* <Footer /> */}
-        </Router>
+        <ThemeProvider theme={theme}>
+            <CssBaseline/>
+            <BrowserRouter>
+                <div className="App">
+                    <TopBar/>
+                    <Container maxWidth="xl">
+                        <Box mt={2}>
+                            <Routes>
+                                <Route path="/" element={<Overview/>}/>
+                                <Route path="/prepare_detection" element={<PrepareDetection/>}/>
+                                <Route path="/detection_result" element={<DetectionResult/>}/>
+                            </Routes>
+                        </Box>
+                    </Container>
+                </div>
+            </BrowserRouter>
+            <ToastContainer
+                position="bottom-right"
+            />
+
+        </ThemeProvider>
     );
 }
 

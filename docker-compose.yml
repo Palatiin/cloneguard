@@ -1,4 +1,5 @@
 # File: docker-compose.yml
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
 # Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
 # Date: 2023-03-15
 # Description: Docker compose file for CloneGuard, contains all services and their configuration.
@@ -71,3 +72,16 @@ services:
       - db
       - redis
       - worker
+
+  web:
+    image: node:alpine
+    volumes:
+      - ./web:/web
+    build:
+      context: .
+    working_dir: /web
+    command: npm start
+    ports:
+      - 3000:3000
+    depends_on:
+      - api

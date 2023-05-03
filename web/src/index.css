@@ -11,3 +11,8 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:disabled {
+    color: black !important;
+    -webkit-text-fill-color:black !important;
+}
