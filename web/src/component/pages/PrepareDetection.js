@@ -1,3 +1,9 @@
+// File: src/component/pages/PrepareDetection.js
+// Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+// Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+// Date: 2023-04-29
+// Description: Implementation of the page where detection can be started.
+
 import React, {useEffect, useState} from "react";
 import {
     Box,

@@ -1,3 +1,9 @@
+// File: src/api.js
+// Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+// Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+// Date: 2023-04-29
+// Description: API request wrapper.
+
 export const api_url = "http://0.0.0.0:8000/api/v1"
 
 

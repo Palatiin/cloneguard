@@ -1,3 +1,9 @@
+// File: src/component/pages/DetectionResults.js
+// Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+// Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+// Date: 2023-04-29
+// Description: Implementation of the page displaying detection results and logs.
+
 import React, {useEffect, useState, useRef} from "react";
 import {
     Grid,

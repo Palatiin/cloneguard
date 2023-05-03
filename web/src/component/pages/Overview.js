@@ -1,3 +1,9 @@
+// File: src/component/pages/Overview.js
+// Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+// Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+// Date: 2023-04-29
+// Description: Implementation of the overview page displaying list of registered projects and stored bugs.
+
 import React, {useState, useEffect} from "react";
 import styled from "@emotion/styled";
 import {

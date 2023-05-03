@@ -1,3 +1,9 @@
+// File: src/component/pages/Overview.js
+// Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+// Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+// Date: 2023-04-29
+// Description: Root component of the web application.
+
 import logo from './logo.svg';
 import './App.css';
 import {BrowserRouter, Route, Routes} from "react-router-dom";
