@@ -13,7 +13,7 @@ from typing import List, Optional, Tuple
 from cloneguard.clients.git import Git
 from cloneguard.src.common import Filter, log_wrapper
 from cloneguard.src.errors import ContextExtractionError
-from cloneguard.src.szz.git_parser import GitParser
+from cloneguard.src.git_parser import GitParser
 
 
 @dataclass
