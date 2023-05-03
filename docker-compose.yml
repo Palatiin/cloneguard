@@ -1,6 +1,13 @@
+# File: docker-compose.yml
+# Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+# Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+# Date: 2023-03-15
+# Description: Docker compose file for CloneGuard, contains all services and their configuration.
+
 version: '3.9'
 
 volumes:
+  # legacy name
   coinwatch_data:
 
 services:
@@ -27,7 +34,7 @@ services:
 
   worker:
     image: app
-    command: python3 -m coinwatch.worker
+    command: python3 -m cloneguard.worker
     volumes:
       - .:/app
     build:
@@ -39,14 +46,14 @@ services:
       PG_HOST: host.docker.internal
       PG_PORT: 5432
     env_file:
-      - ./coinwatch/.env
+      - ./cloneguard/.env
     depends_on:
       - db
       - redis
 
   api:
     image: app
-    command: uvicorn coinwatch.api:app --host 0.0.0.0 --port 8000
+    command: uvicorn cloneguard.api:app --host 0.0.0.0 --port 8000
     volumes:
       - .:/app
     build:
@@ -58,10 +65,23 @@ services:
       PG_HOST: host.docker.internal
       PG_PORT: 5432
     env_file:
-      - ./coinwatch/.env
+      - ./cloneguard/.env
     ports:
       - 8000:8000
     depends_on:
       - db
       - redis
       - worker
+
+  web:
+    image: node:alpine
+    volumes:
+      - ./web:/web
+    build:
+      context: .
+    working_dir: /web
+    command: npm start
+    ports:
+      - 3000:3000
+    depends_on:
+      - api
