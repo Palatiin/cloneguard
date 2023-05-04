@@ -29,7 +29,7 @@ class Git:
     """
 
     api = GitHubAPI()
-    _re_url_contents = re.compile(r"[/:](?P<owner>\w+)/(?P<repo>\w+)\.git")
+    _re_url_contents = re.compile(r"https.*?/(?P<owner>[-\w_]+)/(?P<repo>[-\w_]+)\.git")
 
     base_path = f"{CACHE_PATH}/clones"
 
