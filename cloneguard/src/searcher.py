@@ -53,7 +53,6 @@ class Searcher:
 
     def find_occurrences(self, keyword: str, key_sentence: str) -> List[Tuple[Sentence, float]]:
         """Find occurrence of context keywords in target repository."""
-        occurrences = []
         grep_output = self.repo.grep(re.escape(keyword), files=f"**/*.{self.repo.language}")
 
         with multiprocessing.Pool() as pool:
@@ -96,7 +95,7 @@ class Searcher:
             if len(line_range) == ks_i:
                 break
             line = line.strip()
-            if Filter.line(line):
+            if Filter.line(line, filename=occurrence.filename, file_ext=occurrence.file_extension):
                 continue
             line_range.append((curr_lnum, line))
 
@@ -110,7 +109,7 @@ class Searcher:
             if len(line_range) == CONTEXT_LINES:
                 break
             line = line.strip()
-            if Filter.line(line):
+            if Filter.line(line, filename=occurrence.filename, file_ext=occurrence.file_extension):
                 continue
             line_range.append((curr_lnum, line))
 
@@ -131,27 +130,25 @@ class Searcher:
         """
 
         def determine_start() -> Tuple[int, int]:
-            for i in range(kwi + 1):  # end matching key statement index
-                sim_list = []
-                patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[i][0]
-                for j in range(len(target_code)):
-                    sim = Comparator.similarity(target_code[j][1], patch_context_statement)
-                    sim_list.append(sim)
-                start_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
-                if value > self._levenshtein_threshold:
-                    return i, start_statement_idx
+            sim_list = []
+            patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[0][0]
+            for j in range(0, kwi + 1):
+                sim = Comparator.similarity(target_code[j][1], patch_context_statement)
+                sim_list.append(sim)
+            start_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
+            if value > self._levenshtein_threshold:
+                return 0, start_statement_idx
             return -1, -1
 
         def determine_end() -> Tuple[int, int]:
-            for i in range(len(self.context[ctx].sentence_keyword_pairs) - 1, kwi - 1, -1):
-                sim_list = []
-                patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[i][0]
-                for j in range(len(target_code) - 1, -1, -1):
-                    sim = Comparator.similarity(target_code[j][1], patch_context_statement)
-                    sim_list.append(sim)
-                end_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
-                if value > self._levenshtein_threshold:
-                    return i, len(target_code) - 1 - end_statement_idx
+            sim_list = []
+            patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[-1][0]
+            for j in range(len(target_code) - 1, kwi - 1, -1):
+                sim = Comparator.similarity(target_code[j][1], patch_context_statement)
+                sim_list.append(sim)
+            end_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
+            if value > self._levenshtein_threshold:
+                return len(self.context[ctx].sentence_keyword_pairs) - 1, len(target_code) - 1 - end_statement_idx
             return -1, -1
 
         return determine_start(), determine_end()
@@ -239,20 +236,12 @@ class Searcher:
         for upper_candidate_ks, lower_candidate_ks in candidate_context_ks_pairs:
             upper_target_context_code = self.get_line_range(upper_ksi, upper_candidate_ks)
             upper_boundary = self.determine_boundary(upper_ksi, 0, upper_target_context_code)
-            if (
-                (-1, -1) in upper_boundary
-                or upper_boundary[0][0] > upper_boundary[1][0]
-                or upper_boundary[0][1] > upper_boundary[1][1]
-            ):
+            if (-1, -1) in upper_boundary:
                 continue
 
             lower_target_context_code = self.get_line_range(lower_ksi, lower_candidate_ks)
             lower_boundary = self.determine_boundary(lower_ksi, 1, lower_target_context_code)
-            if (
-                (-1, -1) in lower_boundary
-                or lower_boundary[0][0] > lower_boundary[1][0]
-                or lower_boundary[0][1] > lower_boundary[1][1]
-            ):
+            if (-1, -1) in lower_boundary:
                 continue
 
             candidate_context = TargetContext(
