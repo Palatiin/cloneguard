@@ -7,7 +7,6 @@
 version: '3.9'
 
 volumes:
-  # legacy name
   coinwatch_data:
 
 services:
@@ -77,8 +76,6 @@ services:
     image: node:alpine
     volumes:
       - ./web:/web
-    build:
-      context: .
     working_dir: /web
     command: npm start
     ports:
