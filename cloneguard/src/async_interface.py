@@ -181,7 +181,7 @@ async def search_bugs(data: SearchRequestSchema) -> SearchResultModel:
         # search bug details - fix commits, patch
         try:
             project = Git(project)
-            bug = FixCommitFinder(project, data.bug_id).get_bug()
+            bug = FixCommitFinder(project, data.bug_id.upper()).get_bug()
         except Exception as e:
             raise InternalServerError(e)
 
@@ -301,7 +301,12 @@ async def get_status():
             for match in re.finditer(r"Applied\s*patch:\s*(\[.*?\])\s*repo=(\S+)\b", logs):
                 project = match.group(2)
                 results = orjson.loads(
-                    match.group(1).replace("(", "[").replace(")", "]").replace("False", "false").replace("True", "true")
+                    match.group(1)
+                    .replace("(", "[")
+                    .replace(")", "]")
+                    .replace("False", "false")
+                    .replace("True", "true")
+                    .replace("'", '"')
                 )
                 detections.extend(
                     [
@@ -309,7 +314,7 @@ async def get_status():
                             project_name=project,
                             vulnerable="False" if result[0] else "True",
                             confidence=round(result[1], 3),
-                            location="",  # result[2],
+                            location=result[2],
                         )
                         for result in results
                         if result
