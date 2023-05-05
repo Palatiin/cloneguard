@@ -26,6 +26,15 @@ Initialize environment variables in `.env` file:
 * `SMTP_LOGIN` - SMTP login for sending email notifications
 * `SMTP_PASSWORD` - SMTP password for sending email notifications
 
+#### Initialize the database
+* `docker-compose run db` - start DB
+* `docker exec -it <db_container_id> sh` - connect to the container
+* `pg_restore -U admin -W -d postgres -F t db_data/dump.tar` - run in the container, initialize DB with data from experimentation (use pass: postgres)
+
+or
+
+* `docker-compose run worker ./cli db-init` - initialize DB schema - fresh instance
+
 #### Start up
 * `docker-compose up` - start all services
 * `docker-compose run worker python3 -m cloneguard.cli -h` - access CLI
