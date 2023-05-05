@@ -129,7 +129,7 @@ const Overview = () => {
         post("/bug/update", {
             id: id,
             patch: btoa(patch),
-            fix_commit: fixCommit ? '["'+fixCommit+'"]' : "",
+            fix_commit: fixCommit ? [fixCommit] : "",
             method: method,
         })
             .then((resp) => {
