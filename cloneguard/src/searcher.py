@@ -59,9 +59,15 @@ class Searcher:
             results = pool.starmap(
                 self.process_line, [(line, keyword, key_sentence, self._levenshtein_threshold) for line in grep_output]
             )
-            occurrences = [result for result in results if result is not None]
 
-        return occurrences
+        occurrences = []
+        i = 0
+        for result in results:
+            if result is not None:
+                occurrences.append(result)
+                i += 1
+
+        return occurrences, i
 
     @staticmethod
     def make_candidate_context_ks_pairs(
@@ -208,8 +214,11 @@ class Searcher:
         for i, context in enumerate(self.context):
             for j, sentence_keyword_pair in enumerate(context.sentence_keyword_pairs):
                 sentence, keyword = sentence_keyword_pair
-                occurrences = self.find_occurrences(keyword, sentence.strip())
-                if not occurrences:
+                if not keyword:  # skip forbidden keywords - e.g. 'if', 'for', 'while' - they are not extracted
+                    context_kw_occurrences[i].append([])
+                    continue
+                occurrences, count = self.find_occurrences(keyword, sentence.strip())
+                if not occurrences or count > 5000:
                     context_kw_occurrences[i].append([])
                     continue
                 occurrence: Tuple

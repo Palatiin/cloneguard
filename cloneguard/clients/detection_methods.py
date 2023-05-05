@@ -84,8 +84,17 @@ class BlockScope:
             if bug.patch
             else extractor.get_patch_from_commit(source, bug.commits[0])
         )
-        self.patch_contexts = [extractor.extract(patch=patch) for patch in patches]
-        self.patch_codes = [PatchCode(patch).fetch() for patch in patches]
+        self.patch_contexts = []
+        self.patch_codes = []
+        for patch in patches:
+            try:
+                context = extractor.extract(patch=patch)
+                code = PatchCode(patch).fetch()
+                self.patch_contexts.append(context)
+                self.patch_codes.append(code)
+            except Exception as e:
+                logger.warning(f"clients: detection_methods: BlockScope: {e}")
+                continue
         logger.info("clients: detection_methods: BlockScope ready.")
 
     @log_wrapper
@@ -115,7 +124,8 @@ class BlockScope:
 
         logger.info(f"Applied patch: {patch_applications}", repo=repo.repo)
 
-        vulnerable = [] if not patch_applications[0] else [res for res in patch_applications if not res[0]]
+        patch_applications = list(filter(lambda x: x, patch_applications))
+        vulnerable = [res for res in patch_applications if not res[0]]
         not_applied = None if not vulnerable else max(vulnerable, key=lambda x: x[1])
         if not_applied:
             crud.detection.create(db_session, Detection(confidence=not_applied[1], bug=self.bug.id, project=repo.id))

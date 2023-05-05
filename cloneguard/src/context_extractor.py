@@ -28,6 +28,7 @@ class Extractor:
     """Extractor of patch context."""
 
     _re_token = re.compile(r"[a-zA-Z0-9!._]+")
+    _killer_keywords = {"if"}
 
     def __init__(self, lang: str, context_lines: Optional[int] = 5):
         self.context_lines = context_lines
@@ -49,11 +50,14 @@ class Extractor:
 
         Raises ContextExtractionError if the lines do not contain additions/deletions.
         """
-        # def get_keyword(line: str) -> str:
-        #     tokens = sorted(self._tokenize(line))
-        #     for token in tokens:
-        #
-        #     return tokens[0]
+
+        def get_keyword(line: str) -> str | None:
+            tokens = sorted(self._tokenize(line), key=len, reverse=True)
+            for token in tokens:
+                if token not in self._killer_keywords and len(token) > 2:
+                    return token
+            return None
+
         context = Context()
 
         for line in lines:
@@ -66,9 +70,7 @@ class Extractor:
                 continue  # filter unimportant lines like comments
 
             # select keyword representing the sentence
-            tokens = self._tokenize(line)
-            keyword = max(tokens, key=len)
-            context.sentence_keyword_pairs.append((line, keyword))
+            context.sentence_keyword_pairs.append((line, get_keyword(line)))
         else:  # went through all lines, but didn't find any editing
             raise ContextExtractionError("No additions/deletions in patch code.")
 
