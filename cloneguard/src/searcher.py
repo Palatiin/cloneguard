@@ -71,15 +71,15 @@ class Searcher:
 
     @staticmethod
     def make_candidate_context_ks_pairs(
-        upper_ksi: int, lower_ksi: int, occurrences: List[List[List[Tuple[Sentence, float]]]], patch_length: int
+        upper_ksi: int, lower_ksi: int, occurrences: List[List[Tuple[Sentence, float]]], patch_length: int
     ) -> List[Tuple[Sentence, Sentence]]:
         """Write something."""
         if upper_ksi < 0 or lower_ksi < 0:
             return []
 
         ks_pairs: List[Tuple[Sentence, Sentence]] = []
-        for upper_occurrence, _ in occurrences[0][upper_ksi]:
-            for lower_occurrence, _ in occurrences[1][lower_ksi]:
+        for upper_occurrence, _ in occurrences[0]:
+            for lower_occurrence, _ in occurrences[1]:
                 if (
                     upper_occurrence.filename == lower_occurrence.filename
                     and upper_occurrence.line_number < lower_occurrence.line_number
@@ -206,38 +206,43 @@ class Searcher:
     @log_wrapper
     def search(self, patch_length: int) -> List[CandidateCode]:
         """Find and return candidate codes in target repository."""
-        context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
         self.logger.info("searcher: search: start finding KS")
+        ks_occurrences = [[], []]
+
         for i, context in enumerate(self.context):
             for j, sentence_keyword_pair in enumerate(context.sentence_keyword_pairs):
                 sentence, keyword = sentence_keyword_pair
+
                 if not keyword:  # skip forbidden keywords - e.g. 'if', 'for', 'while' - they are not extracted
-                    context_kw_occurrences[i].append([])
                     continue
                 occurrences, count = self.find_occurrences(keyword, sentence.strip())
+
                 if not occurrences or count > 5000:
-                    context_kw_occurrences[i].append([])
                     continue
+
                 occurrence: Tuple
                 max_similarity_index, occurrence = max(enumerate(occurrences), key=lambda x: x[1][1])
+
                 if occurrence[1] > key_statement_pos[i][2]:
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
+                    ks_occurrences[i] = occurrences
                 elif occurrence[1] == key_statement_pos[i][2] and len(keyword) > len(
                     context.sentence_keyword_pairs[key_statement_pos[i][0]][1]
                 ):
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
-                context_kw_occurrences[i].append(occurrences)
+                    ks_occurrences[i] = occurrences
+
         self.logger.info("searcher: search: KS found")
 
         upper_ksi: int = key_statement_pos[0][0]
         lower_ksi: int = key_statement_pos[1][0]
         candidate_context_ks_pairs = self.make_candidate_context_ks_pairs(
-            upper_ksi, lower_ksi, context_kw_occurrences, patch_length
+            upper_ksi, lower_ksi, ks_occurrences, patch_length
         )
-        del context_kw_occurrences
+        del ks_occurrences
 
         # create list of candidate contexts
         candidate_context_list: List[TargetContext] = []
