@@ -8,7 +8,7 @@ FROM python:3.11-slim
 
 # install system dependencies
 RUN apt-get update -yqq && \
-    apt-get install -yqq curl git default-jdk && \
+    apt-get install -yqq curl git default-jdk cron && \
 	rm -rf /var/lib/apt/lists/*
 
 # install poetry
@@ -32,6 +32,11 @@ COPY ./cloneguard /app/cloneguard
 # configure git
 RUN echo "[safe]" >> ~/.gitconfig && \
     echo "    directory = *" >> ~/.gitconfig
+
+# easier access to cli
+RUN echo "#!/bin/sh" > cli && \
+    echo "exec python3 cloneguard.cli $@" >> cli && \
+	chmod +x cli
 
 # initiliaze nltk, download data sets
 RUN python3 -m cloneguard.utils.nltk_init

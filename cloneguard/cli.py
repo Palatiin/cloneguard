@@ -12,19 +12,16 @@ from typing import List, Tuple
 
 import click
 import structlog
+from crontab import CronTab
 
 import cloneguard.src.db.crud as crud
 from cloneguard.clients.detection_methods import BlockScope, Simian
 from cloneguard.clients.git import Git
-from cloneguard.src.comparator import Comparator
-from cloneguard.src.context_extractor import Context, Extractor
-from cloneguard.src.cve_reader import load_references
-from cloneguard.src.db.schema import Bug
+from cloneguard.src.db.schema import Bug, Project
 from cloneguard.src.db.session import DBSession, db_session
+from cloneguard.src.errors import CLIError
 from cloneguard.src.fixing_commits import FixCommitFinder
 from cloneguard.src.notifications import Postman
-from cloneguard.src.patch_fetcher import PatchCode
-from cloneguard.src.searcher import Searcher
 from cloneguard.src.update_repos import get_repo_objects, update_repos
 
 logger = structlog.get_logger(__name__)
@@ -47,9 +44,9 @@ def cli():
 @cli.command()
 @click.argument("cve", required=True, type=str, nargs=1)
 @click.argument("repo", required=False, type=str, nargs=1)
-@click.argument("simian", required=False, type=bool, nargs=1)
+@click.argument("method", required=False, type=str, nargs=1, default="blockscope")
 @click.argument("repo_date", required=False, type=str, nargs=1)
-def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = ""):
+def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: str = ""):
     """Run the detection.
 
     CVE: ID of vulnerability to scan
@@ -59,46 +56,82 @@ def run(cve: str, repo: str = "bitcoin", simian: bool = False, repo_date: str = 
     """
 
     @session_wrapper
-    def wrapped_run(cve: str, repo: str, simian: bool, repo_date: str):
+    def wrapped_run():
         logger.info("cli: Run started.")
 
-        repo: Git = Git(repo)
-        finder = FixCommitFinder(repo, cve=cve)
+        repository: Git = Git(repo)
+        finder = FixCommitFinder(repository, cve=cve)
         bug = finder.get_bug()
         logger.info(f"Detected fix commits: {bug.commits=}")
 
-        if not simian and not bug.patch:
-            # request input
-            # patch: str = input("Input patch code/clone detection test:\n")
-            # bug.patch = 'void BitcoinCore::shutdown()\n {\n     try\n     {\n         qDebug() << __func__ << ": Running Shutdown in thread";\n         m_node.appShutdown();\n         qDebug() << __func__ << ": Shutdown finished";\n         Q_EMIT shutdownResult();\n     } catch (const std::exception& e) {\n         handleRunawayException(&e);\n     } catch (...) {\n         handleRunawayException(nullptr);\n     }\n }\n \n-BitcoinApplication::BitcoinApplication(interfaces::Node& node, int &argc, char **argv):\n-    QApplication(argc, argv),\n+static int qt_argc = 1;\n+static const char* qt_argv = "bitcoin-qt";\n+\n+BitcoinApplication::BitcoinApplication(interfaces::Node& node):\n+    QApplication(qt_argc, const_cast<char **>(&qt_argv)),\n     coreThread(nullptr),\n     m_node(node),\n     optionsModel(nullptr),\n     clientModel(nullptr),\n     window(nullptr),\n     pollShutdownTimer(nullptr),\n     returnValue(0),\n     platformStyle(nullptr)\n {\n     setQuitOnLastWindowClosed(false);'
-            # crud.bug.update(db_session, bug)
-            ...
-        elif simian and not bug.code:
-            # request input
-            # patch: str = input("Input patch code/clone detection test:\n")
-            # bug.code = ""
-            # crud.bug.update(db_session, bug)
-            ...
+        if method == "simian" and not bug.code:
+            raise CLIError("No code is specified for Simian detection method. Update the bug.code attribute.")
 
-        cloned_repos: List[Git] = get_repo_objects(source=repo)
+        cloned_repos: List[Git] = get_repo_objects(source=repository)
         update_repos(cloned_repos, repo_date)
 
+        method_class = Simian if method == "simian" else BlockScope
+        detection_method = method_class(repository, bug)
         for clone in cloned_repos:
-            # reinitialization of the detection method improves performance
-            # otherwise the code would get stuck in detection_method.run
-            detection_method = (Simian if simian else BlockScope)(repo, bug)
             detection_method.run(clone)
-            del detection_method
 
         logger.info("cli: Run finished.")
 
-    return wrapped_run(cve, repo, simian, repo_date)
+    return wrapped_run()
 
 
 @cli.command()
-def scanner():
+@click.argument("every", required=False, type=str, nargs=1, default="1d")
+def scan(every: str = "1d"):
+    """Run discovery scan."""
+
+    def to_cron_syntax(time: str):
+        # process format HH:MM
+        if len(time.split(":")) == 2:
+            time = time.split(":")
+            try:
+                time = [int(x) for x in time]
+            except Exception as e:
+                logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+                return None
+            return f"{time[1]} {time[0]} * * *"
+        elif len(time.split(":")) > 2:
+            logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+            return None
+
+        # process format Mm | Hh | Dd (e.g. 10m | 10h | 10d)
+        try:
+            value, unit = int(time[:-1]), time[-1]
+        except Exception as e:
+            logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+            return None
+
+        if unit == "m":  # minutes
+            return f" */{value} * * * *"
+        elif unit == "h":  # hours
+            return f"0 */{value} * * *"
+        elif unit == "d":  # days
+            return f"0 15 */{value} * *"
+
+        logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+        return None
+
     @session_wrapper
     def wrapped_scanner():
+        if every:
+            cron_time = to_cron_syntax(every)
+            if not cron_time:
+                return
+            logger.info("cli: Configure cron job.")
+            cron = CronTab(user=True)
+            cron.remove_all(comment="discovery_scan")
+            command = f"cd /app && python3 -m cloneguard.cli scan > /app/cloneguard/_cache/discovery_scan.log"
+            job = cron.new(command=command, comment="discovery_scan")
+            job.setall(to_cron_syntax(every))
+            cron.write()
+            logger.info("cli: Cron job configured.")
+            return
+
         logger.info("cli: Daily scan started.")
         watched = [Git(repo) for repo in crud.project.get_all_watched(db_session)]
         update_repos(watched)
@@ -132,7 +165,7 @@ def scanner():
                     db_session,
                     Bug(
                         cve_id=f"SCAN-{date}",
-                        project=repo.repo,
+                        project=repo.id,
                     ),
                 )
                 bug.commits = complex_commits
@@ -145,15 +178,57 @@ def scanner():
                     Bug(
                         cve_id=f"C#{commit[:10]}",
                         fix_commit=f'["{commit}"]',
-                        project=repo.repo,
+                        project=repo.id,
                     ),
                 )
                 detection_method = BlockScope(repo, bug)
-                detection_method.run(repo)
+                for clone in get_repo_objects(source=repo):
+                    logger.info(f"cli: Scanning clone...", repo=clone.repo, bug_id=bug.id, commit=bug.fix_commit)
+                    detection_method.run(clone)
 
         logger.info("cli: Daily scan finished.")
 
     return wrapped_scanner()
+
+
+@cli.command()
+@click.argument("URL", type=str)
+@click.argument("language", type=str)
+@click.option("--parent", type=str, default=None)
+def register(url: str, language: str, parent: str | None):
+    @session_wrapper
+    def wrapped_register():
+        logger.info("cli: Registering project...")
+
+        project_info = Git._re_url_contents.search(url).groups()
+
+        # check if project already exists
+        if crud.project.get_by_name(db_session, project_info[1]):
+            raise CLIError("Project already exists")
+        # check if parent is registered - if specified
+        if parent and not (reg_parent := crud.project.get_by_name(db_session, parent)):
+            raise CLIError("Parent project not found")
+
+        # create new project record
+        project = crud.project.create(
+            db_session,
+            Project(
+                url=url,
+                name=project_info[1],
+                author=project_info[0],
+                language=language,
+                parent_id=None if not parent else reg_parent.id,
+            ),
+        )
+
+        logger.info("cli: Project registered.")
+
+        # clone project
+        logger.info("cli: Cloning project...")
+        Git(project)
+        logger.info("cli: Project cloned.")
+
+    return wrapped_register()
 
 
 @cli.command()
@@ -166,94 +241,17 @@ def db_init():
 
 
 @cli.command()
-def test_searcher():
-    from tests.test_context_extraction import test_patch2
-
-    repository: Git = Git("bitcoin")
-
-    extractor = Extractor("cpp", 5)
-    patch_context: Tuple[Context, Context] = extractor.extract(test_patch2)
-
-    searcher = Searcher(patch_context, repository)
-    sr = searcher.search()
-
-    patch_code = PatchCode(test_patch2.split("\n")).fetch()
-    candidate_statuses = [Comparator.determine_patch_application(patch_code, candidate) for candidate in sr]
-    pass
-
-
-@cli.command()
-def test():
-    def test_run(cve):
-        repository: Git = Git("bitcoin")
-        load_references(repository, cve.references)
-
-        finder = FixCommitFinder(repository, cve, cache=False)
-        return finder.get_fix_commit()
-
-    # from tests.test import test_cve_fix_commit_pairs
-    #
-    # logger.info("Test CVE scraper + Commit finder")
-    #
-    # for i, test_case in enumerate(test_cve_fix_commit_pairs):
-    #     logger.info(f"================ Test {i:2} ================")
-    #
-    #     try:
-    #         test_result = test_run(test_case[0])
-    #         test_eval = test_result == test_case[1]
-    #     except Exception as e:
-    #         test_result = str(e)
-    #         test_eval = False
-    #
-    #     if test_eval:
-    #         logger.info("Passed.")
-    #     else:
-    #         logger.error(f"Failed. {test_result}")
-
-    logger.info("Test Context Extractor")
-    from tests.test_context_extraction import test_list_context_extraction, test_patch_exception
-
-    from cloneguard.src.errors import ContextExtractionError
-
-    for i, test_case in enumerate(test_list_context_extraction):
-        logger.info(f"================ Test {i:2} ================")
-
-        try:
-            ext = Extractor("cpp", 5)
-            test_result = ext.extract(test_case[0])
-            upper_ctx = [pair[1] for pair in test_result[0].sentence_keyword_pairs]
-            lower_ctx = [pair[1] for pair in test_result[1].sentence_keyword_pairs]
-            test_eval = upper_ctx == test_case[1][0]
-            test_eval &= lower_ctx == test_case[1][1]
-        except Exception as e:
-            test_result = str(e)
-            test_eval = False
-
-        if test_eval:
-            logger.info("Passed.")
-        else:
-            logger.error(f"Failed. {test_result}")
-
-    logger.info(f"================ Test {i + 1:2} ================")
-    try:
-        Extractor("cpp", 5).extract(test_patch_exception)
-        logger.error("Failed. Exception ContextExtractionError expected.")
-    except ContextExtractionError:
-        logger.info("Passed.")
-    except Exception:
-        logger.error("Failed. Exception ContextExtractionError expected.")
-
-
-@cli.command()
 def test_blockscope():
     @session_wrapper
     def run_test(source, bug, date, target):
+        date = None
         repo = Git(source)
         bug = FixCommitFinder(repo, bug, cache=True).get_bug()
         bs = BlockScope(repo, bug)
         target = Git(target)
         update_repos([target], date)
         result = bs.run(target)
+        del bs
         return result
 
     from cloneguard.tests.test_blockscope import test_cases
