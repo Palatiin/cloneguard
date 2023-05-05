@@ -135,7 +135,7 @@ async def update_bug(data: UpdateBugSchema) -> BugModel:
 
         # update fix commits of the record
         if data.fix_commit:
-            bug.commits = data.fix_commit
+            bug.commits = orjson.loads(data.fix_commit)
 
         # commit changes
         crud.bug.update(db_session, bug)
@@ -181,13 +181,13 @@ async def search_bugs(data: SearchRequestSchema) -> SearchResultModel:
         # search bug details - fix commits, patch
         try:
             project = Git(project)
-            bug = FixCommitFinder(project, data.bug_id.upper()).get_bug()
+            bug = FixCommitFinder(project, data.bug_id.upper(), True).get_bug()
         except Exception as e:
             raise InternalServerError(e)
 
         return SearchResultModel(
             commits=bug.commits,
-            patch=bug.patch,
+            patch=bug.patch or "",
         )
 
     except ValidationError as e:
@@ -255,8 +255,8 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
     """
     try:
         # validate input data
-        if not data.bug_id or not data.commit or not data.patch:
-            raise ValidationError("Missing value: bug_id or commit or patch")
+        if not data.bug_id or not data.commit:
+            raise ValidationError("Missing value: bug_id or commit")
 
         # schedule detection task
         redis_conn = redis.Redis.from_url(REDIS_URL)
