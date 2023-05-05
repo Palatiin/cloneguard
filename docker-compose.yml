@@ -36,8 +36,6 @@ services:
     command: python3 -m cloneguard.worker
     volumes:
       - .:/app
-    build:
-      context: .
     environment:
       DB_NAME: postgres
       PG_USER: admin
