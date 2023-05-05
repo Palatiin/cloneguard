@@ -14,6 +14,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+	Tooltip,
     TextField,
     Typography
 } from "@mui/material";
@@ -86,7 +87,9 @@ const DetectionResult = () => {
                             <TableRow>
                                 <StyledTableCell><Typography>Project name</Typography></StyledTableCell>
                                 <StyledTableCell><Typography>Vulnerable</Typography></StyledTableCell>
-                                <StyledTableCell><Typography>Confidence</Typography></StyledTableCell>
+                                <Tooltip title="Value between 0.0-1.0 for DEL/ADD patch types. For CHG type 0.0-2.0">
+                                    <StyledTableCell><Typography>Confidence</Typography></StyledTableCell>
+                                </Tooltip>
                                 <StyledTableCell><Typography>Location</Typography></StyledTableCell>
                             </TableRow>
                         </TableHead>
