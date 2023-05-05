@@ -13,16 +13,19 @@ const TopBar = () => {
     return (
         <AppBar position="static">
             <Toolbar>
-                <Typography variant="h6">Detection of Cloned Vulnerabilities</Typography>
+                <Typography variant="h6" style={{ fontWeight: 'bold' }}>Detection of Cloned Vulnerabilities</Typography>
                 <Box sx={{flexGrow: 1 }} />
-                <Button variant="filled" onClick={() => navigate("/")}>
+                <Button variant="filled" onClick={() => navigate("/")} style={{ fontWeight: 'bold' }}>
                     overview
                 </Button>
-                <Button variant="filled" onClick={() => navigate("/prepare_detection")}>
+                <Button variant="filled" onClick={() => navigate("/prepare_detection")} style={{ fontWeight: 'bold' }}>
                     prepare detection
                 </Button>
-                <Button variant="filled" onClick={() => navigate("/detection_result")}>
+                <Button variant="filled" onClick={() => navigate("/detection_result")} style={{ fontWeight: 'bold' }}>
                     detection result
+                </Button>
+                <Button variant="filled" href="http://localhost:8000/api/v1/docs" style={{ fontWeight: 'bold' }}>
+                   api docs
                 </Button>
             </Toolbar>
         </AppBar>
