@@ -14,6 +14,7 @@ services:
     image: postgres:14
     volumes:
       - coinwatch_data:/var/lib/postgresql/data
+      - ./db_data:/db_data
     ports:
       - 5432:5432
     environment:
