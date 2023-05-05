@@ -147,7 +147,7 @@ class Git:
         self.checkout()
 
         command = ["git", "pull"]
-        logger.info("git: sync Command: " + " ".join(command), repo=self.repo)
+        logger.info("git: sync: Command: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
 
         self.checkout()  # digibyte automatically switches to branch `develop`
