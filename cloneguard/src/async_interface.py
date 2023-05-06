@@ -135,7 +135,7 @@ async def update_bug(data: UpdateBugSchema) -> BugModel:
 
         # update fix commits of the record
         if data.fix_commit:
-            bug.commits = orjson.loads(data.fix_commit)
+            bug.commits = [data.fix_commit]
 
         # commit changes
         crud.bug.update(db_session, bug)

@@ -48,7 +48,7 @@ class UpdateBugSchema(CGApiModel):
         default="",
         title="Fix commit(s)",
         description="Commits fixing the bug.",
-        example="['a1b2c3d4e5']",
+        example="a1b2c3d4e5",
     )
 
     patch: str = Field(
