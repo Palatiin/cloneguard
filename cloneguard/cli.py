@@ -68,7 +68,7 @@ def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: 
             raise CLIError("No code is specified for Simian detection method. Update the bug.code attribute.")
 
         cloned_repos: List[Git] = get_repo_objects(source=repository)
-        update_repos(cloned_repos, repo_date)
+        # update_repos(cloned_repos, repo_date)
 
         method_class = Simian if method == "simian" else BlockScope
         detection_method = method_class(repository, bug)
@@ -92,28 +92,26 @@ def scan(every: str = "1d"):
             try:
                 time = [int(x) for x in time]
             except Exception as e:
-                logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+                logger.error("cli: Invalid time format. Supported formats: 10h | 10d | 17:00", time=time)
                 return None
             return f"{time[1]} {time[0]} * * *"
         elif len(time.split(":")) > 2:
-            logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+            logger.error("cli: Invalid time format. Supported formats: 10h | 10d | 17:00", time=time)
             return None
 
-        # process format Mm | Hh | Dd (e.g. 10m | 10h | 10d)
+        # process format Hh | Dd (e.g. 10h | 10d)
         try:
             value, unit = int(time[:-1]), time[-1]
         except Exception as e:
-            logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+            logger.error("cli: Invalid time format. Supported formats: 10h | 10d | 17:00", time=time)
             return None
 
-        if unit == "m":  # minutes
-            return f" */{value} * * * *"
-        elif unit == "h":  # hours
+        if unit == "h":  # hours
             return f"0 */{value} * * *"
         elif unit == "d":  # days
             return f"0 15 */{value} * *"
 
-        logger.error("cli: Invalid time format. Supported formats: 10m | 10h | 10d | 17:00", time=time)
+        logger.error("cli: Invalid time format. Supported formats: 10h | 10d | 17:00", time=time)
         return None
 
     @session_wrapper
@@ -127,7 +125,8 @@ def scan(every: str = "1d"):
             cron.remove_all(comment="discovery_scan")
             command = f"cd /app && python3 -m cloneguard.cli scan > /app/cloneguard/_cache/discovery_scan.log"
             job = cron.new(command=command, comment="discovery_scan")
-            job.setall(to_cron_syntax(every))
+            logger.info(f"cli: Setting cron schedule to {cron_time}.")
+            job.setall(cron_time)
             cron.write()
             logger.info("cli: Cron job configured.")
             return
@@ -233,11 +232,13 @@ def register(url: str, language: str, parent: str | None):
 
 @cli.command()
 def db_init():
-    from cloneguard.src.db.session import DBSchemaSetup, db_session
-    from cloneguard.utils.db_init import init
+    from cloneguard.src.db.session import DBSchemaSetup
+
+    # from cloneguard.utils.db_init import init
 
     with DBSchemaSetup():
-        init(db_session)
+        # init(db_session)
+        pass
 
 
 @cli.command()
