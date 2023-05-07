@@ -98,6 +98,12 @@ class Git:
         for _hash in hashes:
             yield _hash, self.show(_hash, quiet=True)
 
+    def log(self, before: str):
+        command = ["git", "log", "--oneline", "--before", before, "-n 1"]
+        logger.info("git: log: Command: " + " ".join(command), repo=self.repo)
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE, universal_newlines=True)
+        return process.stdout.split()[0]
+
     def show(self, _hash: str, quiet: Optional[bool] = True, context: int = 0) -> str:
         command = ["git", "show", "--date=iso"]
         command += ["--quiet"] if quiet else []
@@ -156,10 +162,7 @@ class Git:
         self.checkout()  # digibyte automatically switches to branch `develop`
 
     def get_version_from_date(self, date: str) -> NoReturn:
-        rev_list = self.rev_list(before=date)
-        rev = next(rev_list)[0]
-        del rev_list
-
-        command = ["git", "reset", "--hard", rev]
+        commit = self.log(before=date)
+        command = ["git", "reset", "--hard", commit]
         logger.info("git: get_version_from_date: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
