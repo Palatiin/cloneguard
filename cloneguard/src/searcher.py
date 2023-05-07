@@ -13,7 +13,7 @@ from typing import List, Tuple
 import structlog
 
 from cloneguard.clients.git import Git
-from cloneguard.settings import CONTEXT_LINES
+from cloneguard.settings import CONTEXT_LINES, CANDIDATE_CODE_MAX_LINES_MODIFIER
 from cloneguard.src.common import Filter, log_wrapper
 from cloneguard.src.comparator import Comparator
 from cloneguard.src.context_extractor import Context
@@ -51,7 +51,7 @@ class Searcher:
         sentence = Sentence(file, file_extension, int(line_number), sentence)
         return sentence, sim
 
-    def find_occurrences(self, keyword: str, key_sentence: str) -> List[Tuple[Sentence, float]]:
+    def find_occurrences(self, keyword: str, key_sentence: str) -> Tuple[List[Tuple[Sentence, float]], int]:
         """Find occurrence of context keywords in target repository."""
         grep_output = self.repo.grep(re.escape(keyword), files=f"**/*.{self.repo.language}")
 
@@ -77,13 +77,14 @@ class Searcher:
         if upper_ksi < 0 or lower_ksi < 0:
             return []
 
+        mod = CANDIDATE_CODE_MAX_LINES_MODIFIER
         ks_pairs: List[Tuple[Sentence, Sentence]] = []
         for upper_occurrence, _ in occurrences[0]:
             for lower_occurrence, _ in occurrences[1]:
                 if (
                     upper_occurrence.filename == lower_occurrence.filename
                     and upper_occurrence.line_number < lower_occurrence.line_number
-                    and lower_occurrence.line_number - upper_occurrence.line_number < patch_length * 6
+                    and lower_occurrence.line_number - upper_occurrence.line_number < patch_length * mod
                 ):
                     ks_pairs.append((upper_occurrence, lower_occurrence))
 
@@ -190,10 +191,10 @@ class Searcher:
                 if Filter.line(line, filename, file_ext):
                     continue
                 line_count += 1
-                if line_count > patch_lenght * 5:
+                if line_count > patch_lenght * CANDIDATE_CODE_MAX_LINES_MODIFIER:
                     break
                 candidate_code.append(line)
-            if line_count < patch_lenght * 5:
+            if line_count < patch_lenght * CANDIDATE_CODE_MAX_LINES_MODIFIER:
                 candidate_code_list.append(
                     CandidateCode(
                         context=candidate,

@@ -138,6 +138,7 @@ async def update_bug(data: UpdateBugSchema) -> BugModel:
             bug.commits = [data.fix_commit]
 
         # commit changes
+        bug.verified = True
         crud.bug.update(db_session, bug)
 
         return BugModel(
@@ -320,6 +321,7 @@ async def get_status():
                         if result
                     ]
                 )
+            detections = sorted(detections, key=lambda x: x.project_name)
         except Exception as e:
             raise InternalServerError(e)
 

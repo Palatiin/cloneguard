@@ -28,7 +28,7 @@ Initialize environment variables in `.env` file:
 
 #### Initialize the database
 * `docker-compose run db` - start DB
-* `docker exec -it <db_container_id> sh` - connect to the container
+* `docker-compose exec db sh` - connect to the container
 * `pg_restore -U admin -W -d postgres -F t db_data/dump.tar` - run in the container, initialize DB with data from experimentation (use pass: postgres)
 
 or
@@ -37,7 +37,7 @@ or
 
 #### Start up
 * `docker-compose up` - start all services
-* `docker-compose run worker python3 -m cloneguard.cli -h` - access CLI
+* `docker-compose exec worker ./cli --help` - access CLI
 
 #### Services
 * `web` - web interface, available at `http://localhost:3000`
