@@ -43,6 +43,7 @@ services:
       PG_PASS: postgres
       PG_HOST: host.docker.internal
       PG_PORT: 5432
+      TZ: Europe/Prague
     env_file:
       - ./cloneguard/.env
     depends_on:
@@ -62,6 +63,7 @@ services:
       PG_PASS: postgres
       PG_HOST: host.docker.internal
       PG_PORT: 5432
+      TZ: Europe/Prague
     env_file:
       - ./cloneguard/.env
     ports:

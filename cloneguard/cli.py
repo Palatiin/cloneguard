@@ -7,22 +7,25 @@
 # Description: Command line interface of the detection tool
 
 
-from datetime import datetime as dt
-from typing import List, Tuple
+from typing import List
+import subprocess
 
 import click
+import redis
+from rq import Queue
 import structlog
 from crontab import CronTab
 
 import cloneguard.src.db.crud as crud
 from cloneguard.clients.detection_methods import BlockScope, Simian
 from cloneguard.clients.git import Git
-from cloneguard.src.db.schema import Bug, Project
+from cloneguard.settings import REDIS_URL
+from cloneguard.src.db.schema import Project
 from cloneguard.src.db.session import DBSession, db_session
 from cloneguard.src.errors import CLIError
 from cloneguard.src.fixing_commits import FixCommitFinder
-from cloneguard.src.notifications import Postman
 from cloneguard.src.update_repos import get_repo_objects, update_repos
+from cloneguard.tasks import discovery_scan_task
 
 logger = structlog.get_logger(__name__)
 
@@ -45,7 +48,7 @@ def cli():
 @click.argument("cve", required=True, type=str, nargs=1)
 @click.argument("repo", required=False, type=str, nargs=1)
 @click.argument("method", required=False, type=str, nargs=1, default="blockscope")
-@click.argument("repo_date", required=False, type=str, nargs=1)
+@click.option("--date", type=str, default="")
 def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: str = ""):
     """Run the detection.
 
@@ -81,8 +84,8 @@ def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: 
 
 
 @cli.command()
-@click.argument("every", required=False, type=str, nargs=1, default="1d")
-def scan(every: str = "1d"):
+@click.argument("every", required=False, type=str, nargs=1, default="")
+def scan(every: str = ""):
     """Run discovery scan."""
 
     def to_cron_syntax(time: str):
@@ -114,80 +117,33 @@ def scan(every: str = "1d"):
         logger.error("cli: Invalid time format. Supported formats: 10h | 10d | 17:00", time=time)
         return None
 
-    @session_wrapper
-    def wrapped_scanner():
-        if every:
-            cron_time = to_cron_syntax(every)
-            if not cron_time:
-                return
-            logger.info("cli: Configure cron job.")
-            cron = CronTab(user=True)
-            cron.remove_all(comment="discovery_scan")
-            command = f"cd /app && python3 -m cloneguard.cli scan > /app/cloneguard/_cache/discovery_scan.log"
-            job = cron.new(command=command, comment="discovery_scan")
-            logger.info(f"cli: Setting cron schedule to {cron_time}.")
-            job.setall(cron_time)
-            cron.write()
-            logger.info("cli: Cron job configured.")
+    if every:
+        cron_time = to_cron_syntax(every)
+        if not cron_time:
+            return
+        logger.info("cli: Starting cron.service")
+        try:
+            subprocess.run(["systemctl", "start", "cron"], check=True)
+        except subprocess.CalledProcessError as e:
+            logger.error("cli: Failed to start cron.service", error=e.stderr)
             return
 
-        logger.info("cli: Daily scan started.")
-        watched = [Git(repo) for repo in crud.project.get_all_watched(db_session)]
-        update_repos(watched)
+        logger.info("cli: Configure cron job.")
+        cron = CronTab(user=True)
+        cron.remove_all(comment="discovery_scan")
+        command = f"cd /app && ./cli scan > /app/cloneguard/_cache/discovery_scan.log"
+        job = cron.new(command=command, comment="discovery_scan")
+        logger.info(f"cli: Setting cron schedule to {cron_time}.")
+        job.setall(cron_time)
+        cron.write()
+        logger.info("cli: Cron job configured.")
+        return
 
-        for repo in watched:
-            logger.info(f"cli: Scanning project.", repo=repo.repo)
-            finder = FixCommitFinder(repo)
-            commits = finder.scan_recent()
-
-            complex_commits: List[str] = []
-            simple_commits: List[str] = []
-            for commit in commits:
-                tmp_bug = Bug(cve_id=f"C#{commit[:10]}", fix_commit=f'["{commit}"]', project=repo.repo)
-                detection_method = BlockScope(repo, tmp_bug)
-                if len(detection_method.patch_contexts) > 1:
-                    complex_commits.append(commit)
-                elif len(detection_method.patch_contexts):
-                    simple_commits.append(commit)
-
-            commits = complex_commits + simple_commits
-            if not commits:
-                logger.info(f"cli: Project OK.", repo=repo.repo)
-                continue
-            logger.info(f"cli: {repo.repo} found bug-fixes.", commits=commits)
-            Postman().notify_bug_detection(commits, repo)
-
-            # create single record in table Bug for all complex commits
-            if complex_commits:
-                date = dt.now().strftime("%y%m%d")  # YYMMDD
-                bug = crud.bug.create(
-                    db_session,
-                    Bug(
-                        cve_id=f"SCAN-{date}",
-                        project=repo.id,
-                    ),
-                )
-                bug.commits = complex_commits
-                crud.bug.update(db_session, bug)
-
-            # create single record in table Bug for each simple commits and run detection method for each
-            for commit in simple_commits:
-                bug = crud.bug.create(
-                    db_session,
-                    Bug(
-                        cve_id=f"C#{commit[:10]}",
-                        fix_commit=f'["{commit}"]',
-                        project=repo.id,
-                    ),
-                )
-                detection_method = BlockScope(repo, bug)
-                for clone in get_repo_objects(source=repo):
-                    logger.info(f"cli: Scanning clone...", repo=clone.repo, bug_id=bug.id, commit=bug.fix_commit)
-                    detection_method.run(clone)
-
-        logger.info("cli: Daily scan finished.")
-
-    return wrapped_scanner()
+    # schedule discovery scan
+    redis_conn = redis.Redis.from_url(REDIS_URL)
+    queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+    queue.enqueue(discovery_scan_task)
+    logger.info("cli: Discovery scan scheduled.")
 
 
 @cli.command()

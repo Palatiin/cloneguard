@@ -1,2 +1,2 @@
 #!/bin/sh
-exec python3 -m cloneguard.cli $@
+/usr/local/bin/python3 -m cloneguard.cli $@
