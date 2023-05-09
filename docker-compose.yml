@@ -78,7 +78,7 @@ services:
     volumes:
       - ./web:/web
     working_dir: /web
-    command: npm start
+    command: sh -c "npm install && npm start"
     ports:
       - 3000:3000
     depends_on:
