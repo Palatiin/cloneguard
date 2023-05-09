@@ -39,6 +39,8 @@ class Simian:
     _re_duplicate_block = re.compile(r"Found.*?(?=Found)", flags=re.S)
     _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d+)\s*in\s*(\S+)")
 
+    _known_languages = ["java", "c", "cpp"]
+
     def __init__(self, source: Git, bug: Bug):
         if not os.path.exists(f"{self.simian_jar_path}"):
             logger.error("clients: simian: Simian not found.")
@@ -59,10 +61,9 @@ class Simian:
             "-jar",
             self.simian_jar_path,
             f"-threshold={self.threshold}",
-            f"-language={repo.language}",
-            self.test_file,
-            files,
         ]
+        command += [f"-language={repo.language}"] if repo.language in self._known_languages else []
+        command += [self.test_file, files]
         logger.info(f"clients: detection_methods: simian exec: {' '.join(command)}")
         process = subprocess.run(command, stdout=subprocess.PIPE)
         result = process.stdout.decode(errors="replace")
@@ -108,6 +109,8 @@ class BlockScope:
             if bug.patch
             else extractor.get_patch_from_commit(source, bug.commits[0])
         )
+        if bug.patch and bug.patch.startswith("commit "):
+            patches = extractor.get_patch_from_commit_str(bug.patch)
         self.patch_contexts = []
         self.patch_codes = []
         for patch in patches:

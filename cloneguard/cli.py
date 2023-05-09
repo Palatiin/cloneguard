@@ -49,7 +49,7 @@ def cli():
 @click.argument("repo", required=False, type=str, nargs=1)
 @click.argument("method", required=False, type=str, nargs=1, default="blockscope")
 @click.option("--date", type=str, default="")
-def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: str = ""):
+def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", date: str = ""):
     """Run the detection.
 
     CVE: ID of vulnerability to scan
@@ -71,7 +71,7 @@ def run(cve: str, repo: str = "bitcoin", method: str = "blockscope", repo_date: 
             raise CLIError("No code is specified for Simian detection method. Update the bug.code attribute.")
 
         cloned_repos: List[Git] = get_repo_objects(source=repository)
-        # update_repos(cloned_repos, repo_date)
+        update_repos(cloned_repos, date)
 
         method_class = Simian if method == "simian" else BlockScope
         detection_method = method_class(repository, bug)
@@ -141,7 +141,7 @@ def scan(every: str = ""):
 
     # schedule discovery scan
     redis_conn = redis.Redis.from_url(REDIS_URL)
-    queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+    queue = Queue("task_queue", connection=redis_conn, default_timeout=900)
     queue.enqueue(discovery_scan_task)
     logger.info("cli: Discovery scan scheduled.")
 

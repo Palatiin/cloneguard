@@ -99,12 +99,10 @@ class Extractor:
         return upper_context, lower_context
 
     @staticmethod
-    def get_patch_from_commit(repo: Git, commit: str, context: int = 10) -> List[List[str]]:
-        diff = repo.show(commit, quiet=False, context=context)
-        parsed_diff = GitParser().parse_diff(diff)
-
+    def _process_parsed_diff(parsed_diff):
         relevant_files = [file for file in parsed_diff["affected_files"] if not Filter.file(filename=file)]
         patch_list = []
+
         for file in relevant_files:
             file_ext = Path(file).suffix[1:]
             for block in parsed_diff[file]["affected_lines"]:
@@ -118,3 +116,13 @@ class Extractor:
                 patch_list.append(patch)
 
         return patch_list
+
+    def get_patch_from_commit(self, repo: Git, commit: str, context: int = 10) -> List[List[str]]:
+        diff = repo.show(commit, quiet=False, context=context)
+        parsed_diff = GitParser().parse_diff(diff)
+
+        return self._process_parsed_diff(parsed_diff)
+
+    def get_patch_from_commit_str(self, commit_str: str) -> List[List[str]]:
+        parsed_diff = GitParser().parse_diff(commit_str)
+        return self._process_parsed_diff(parsed_diff)

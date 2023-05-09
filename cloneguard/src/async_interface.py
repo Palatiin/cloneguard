@@ -261,7 +261,7 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
 
         # schedule detection task
         redis_conn = redis.Redis.from_url(REDIS_URL)
-        queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+        queue = Queue("task_queue", connection=redis_conn, default_timeout=900)
         queue.enqueue(
             execute_task,
             data.bug_id,
