@@ -14,6 +14,7 @@ import {
     TableContainer,
     TableHead,
     TableRow,
+	Tooltip,
     TextField,
     Typography
 } from "@mui/material";
@@ -30,6 +31,14 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
     fontSize: 14,
   },
 }));
+
+const Circle = styled('span')`
+    display: inline-block;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    background-color: ${(props) => (props.color === 'green' ? 'green' : 'red')};
+`;
 
 const DetectionResult = () => {
     const textFieldRef = useRef(null);
@@ -85,8 +94,12 @@ const DetectionResult = () => {
                         <TableHead>
                             <TableRow>
                                 <StyledTableCell><Typography>Project name</Typography></StyledTableCell>
-                                <StyledTableCell><Typography>Vulnerable</Typography></StyledTableCell>
-                                <StyledTableCell><Typography>Confidence</Typography></StyledTableCell>
+                                <Tooltip title="Green = patched, Red = vulnerable">
+                                    <StyledTableCell><Typography>Vulnerable</Typography></StyledTableCell>
+                                </Tooltip>
+                                <Tooltip title="Value between 0.0-1.0 for DEL/ADD patch types. For CHG type 0.0-2.0">
+                                    <StyledTableCell><Typography>Confidence</Typography></StyledTableCell>
+                                </Tooltip>
                                 <StyledTableCell><Typography>Location</Typography></StyledTableCell>
                             </TableRow>
                         </TableHead>
@@ -94,7 +107,7 @@ const DetectionResult = () => {
                             {detectionResults.map((result, index) => (
                                 <TableRow key={index}>
                                     <StyledTableCell>{result.project_name}</StyledTableCell>
-                                    <StyledTableCell>{result.vulnerable}</StyledTableCell>
+                                    <StyledTableCell><Circle color={result.vulnerable === 'True' ? 'red': 'green'} /></StyledTableCell>
                                     <StyledTableCell>{result.confidence}</StyledTableCell>
                                     <StyledTableCell>{result.location}</StyledTableCell>
                                 </TableRow>

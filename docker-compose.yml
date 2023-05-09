@@ -7,7 +7,6 @@
 version: '3.9'
 
 volumes:
-  # legacy name
   coinwatch_data:
 
 services:
@@ -15,6 +14,7 @@ services:
     image: postgres:14
     volumes:
       - coinwatch_data:/var/lib/postgresql/data
+      - ./db_data:/db_data
     ports:
       - 5432:5432
     environment:
@@ -37,14 +37,13 @@ services:
     command: python3 -m cloneguard.worker
     volumes:
       - .:/app
-    build:
-      context: .
     environment:
       DB_NAME: postgres
       PG_USER: admin
       PG_PASS: postgres
       PG_HOST: host.docker.internal
       PG_PORT: 5432
+      TZ: Europe/Prague
     env_file:
       - ./cloneguard/.env
     depends_on:
@@ -64,6 +63,7 @@ services:
       PG_PASS: postgres
       PG_HOST: host.docker.internal
       PG_PORT: 5432
+      TZ: Europe/Prague
     env_file:
       - ./cloneguard/.env
     ports:
@@ -77,10 +77,8 @@ services:
     image: node:alpine
     volumes:
       - ./web:/web
-    build:
-      context: .
     working_dir: /web
-    command: npm start
+    command: sh -c "npm install && npm start"
     ports:
       - 3000:3000
     depends_on:

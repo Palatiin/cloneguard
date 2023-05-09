@@ -60,6 +60,7 @@ CACHE_PATH = "cloneguard/_cache"
 CONTEXT_LINES = 5
 THRESHOLD = 0.25
 REWARD = 0.95
+CANDIDATE_CODE_MAX_LINES_MODIFIER = 7
 
 # PostgreSQL configuration
 PG_USER = os.getenv("PG_USER", "admin")

@@ -13,7 +13,7 @@ from typing import List, Tuple
 import structlog
 
 from cloneguard.clients.git import Git
-from cloneguard.settings import CONTEXT_LINES
+from cloneguard.settings import CONTEXT_LINES, CANDIDATE_CODE_MAX_LINES_MODIFIER
 from cloneguard.src.common import Filter, log_wrapper
 from cloneguard.src.comparator import Comparator
 from cloneguard.src.context_extractor import Context
@@ -51,34 +51,40 @@ class Searcher:
         sentence = Sentence(file, file_extension, int(line_number), sentence)
         return sentence, sim
 
-    def find_occurrences(self, keyword: str, key_sentence: str) -> List[Tuple[Sentence, float]]:
+    def find_occurrences(self, keyword: str, key_sentence: str) -> Tuple[List[Tuple[Sentence, float]], int]:
         """Find occurrence of context keywords in target repository."""
-        occurrences = []
         grep_output = self.repo.grep(re.escape(keyword), files=f"**/*.{self.repo.language}")
 
         with multiprocessing.Pool() as pool:
             results = pool.starmap(
                 self.process_line, [(line, keyword, key_sentence, self._levenshtein_threshold) for line in grep_output]
             )
-            occurrences = [result for result in results if result is not None]
 
-        return occurrences
+        occurrences = []
+        i = 0
+        for result in results:
+            if result is not None:
+                occurrences.append(result)
+                i += 1
+
+        return occurrences, i
 
     @staticmethod
     def make_candidate_context_ks_pairs(
-        upper_ksi: int, lower_ksi: int, occurrences: List[List[List[Tuple[Sentence, float]]]], patch_length: int
+        upper_ksi: int, lower_ksi: int, occurrences: List[List[Tuple[Sentence, float]]], patch_length: int
     ) -> List[Tuple[Sentence, Sentence]]:
         """Write something."""
         if upper_ksi < 0 or lower_ksi < 0:
             return []
 
+        mod = CANDIDATE_CODE_MAX_LINES_MODIFIER
         ks_pairs: List[Tuple[Sentence, Sentence]] = []
-        for upper_occurrence, _ in occurrences[0][upper_ksi]:
-            for lower_occurrence, _ in occurrences[1][lower_ksi]:
+        for upper_occurrence, _ in occurrences[0]:
+            for lower_occurrence, _ in occurrences[1]:
                 if (
                     upper_occurrence.filename == lower_occurrence.filename
                     and upper_occurrence.line_number < lower_occurrence.line_number
-                    and lower_occurrence.line_number - upper_occurrence.line_number < patch_length * 6
+                    and lower_occurrence.line_number - upper_occurrence.line_number < patch_length * mod
                 ):
                     ks_pairs.append((upper_occurrence, lower_occurrence))
 
@@ -96,7 +102,7 @@ class Searcher:
             if len(line_range) == ks_i:
                 break
             line = line.strip()
-            if Filter.line(line):
+            if Filter.line(line, filename=occurrence.filename, file_ext=occurrence.file_extension):
                 continue
             line_range.append((curr_lnum, line))
 
@@ -110,7 +116,7 @@ class Searcher:
             if len(line_range) == CONTEXT_LINES:
                 break
             line = line.strip()
-            if Filter.line(line):
+            if Filter.line(line, filename=occurrence.filename, file_ext=occurrence.file_extension):
                 continue
             line_range.append((curr_lnum, line))
 
@@ -131,27 +137,25 @@ class Searcher:
         """
 
         def determine_start() -> Tuple[int, int]:
-            for i in range(kwi + 1):  # end matching key statement index
-                sim_list = []
-                patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[i][0]
-                for j in range(len(target_code)):
-                    sim = Comparator.similarity(target_code[j][1], patch_context_statement)
-                    sim_list.append(sim)
-                start_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
-                if value > self._levenshtein_threshold:
-                    return i, start_statement_idx
+            sim_list = []
+            patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[0][0]
+            for j in range(0, kwi + 1):
+                sim = Comparator.similarity(target_code[j][1], patch_context_statement)
+                sim_list.append(sim)
+            start_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
+            if value > self._levenshtein_threshold:
+                return 0, start_statement_idx
             return -1, -1
 
         def determine_end() -> Tuple[int, int]:
-            for i in range(len(self.context[ctx].sentence_keyword_pairs) - 1, kwi - 1, -1):
-                sim_list = []
-                patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[i][0]
-                for j in range(len(target_code) - 1, -1, -1):
-                    sim = Comparator.similarity(target_code[j][1], patch_context_statement)
-                    sim_list.append(sim)
-                end_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
-                if value > self._levenshtein_threshold:
-                    return i, len(target_code) - 1 - end_statement_idx
+            sim_list = []
+            patch_context_statement: str = self.context[ctx].sentence_keyword_pairs[-1][0]
+            for j in range(len(target_code) - 1, kwi - 1, -1):
+                sim = Comparator.similarity(target_code[j][1], patch_context_statement)
+                sim_list.append(sim)
+            end_statement_idx, value = max(enumerate(sim_list), key=lambda x: x[1])
+            if value > self._levenshtein_threshold:
+                return len(self.context[ctx].sentence_keyword_pairs) - 1, len(target_code) - 1 - end_statement_idx
             return -1, -1
 
         return determine_start(), determine_end()
@@ -187,10 +191,10 @@ class Searcher:
                 if Filter.line(line, filename, file_ext):
                     continue
                 line_count += 1
-                if line_count > patch_lenght * 5:
+                if line_count > patch_lenght * CANDIDATE_CODE_MAX_LINES_MODIFIER:
                     break
                 candidate_code.append(line)
-            if line_count < patch_lenght * 5:
+            if line_count < patch_lenght * CANDIDATE_CODE_MAX_LINES_MODIFIER:
                 candidate_code_list.append(
                     CandidateCode(
                         context=candidate,
@@ -203,35 +207,43 @@ class Searcher:
     @log_wrapper
     def search(self, patch_length: int) -> List[CandidateCode]:
         """Find and return candidate codes in target repository."""
-        context_kw_occurrences: List[List[List[Tuple[Sentence, float]]]] = [[], []]
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
         self.logger.info("searcher: search: start finding KS")
+        ks_occurrences = [[], []]
+
         for i, context in enumerate(self.context):
             for j, sentence_keyword_pair in enumerate(context.sentence_keyword_pairs):
                 sentence, keyword = sentence_keyword_pair
-                occurrences = self.find_occurrences(keyword, sentence.strip())
-                if not occurrences:
-                    context_kw_occurrences[i].append([])
+
+                if not keyword:  # skip forbidden keywords - e.g. 'if', 'for', 'while' - they are not extracted
                     continue
+                occurrences, count = self.find_occurrences(keyword, sentence.strip())
+
+                if not occurrences or count > 5000:
+                    continue
+
                 occurrence: Tuple
                 max_similarity_index, occurrence = max(enumerate(occurrences), key=lambda x: x[1][1])
+
                 if occurrence[1] > key_statement_pos[i][2]:
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
+                    ks_occurrences[i] = occurrences
                 elif occurrence[1] == key_statement_pos[i][2] and len(keyword) > len(
                     context.sentence_keyword_pairs[key_statement_pos[i][0]][1]
                 ):
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
-                context_kw_occurrences[i].append(occurrences)
+                    ks_occurrences[i] = occurrences
+
         self.logger.info("searcher: search: KS found")
 
         upper_ksi: int = key_statement_pos[0][0]
         lower_ksi: int = key_statement_pos[1][0]
         candidate_context_ks_pairs = self.make_candidate_context_ks_pairs(
-            upper_ksi, lower_ksi, context_kw_occurrences, patch_length
+            upper_ksi, lower_ksi, ks_occurrences, patch_length
         )
-        del context_kw_occurrences
+        del ks_occurrences
 
         # create list of candidate contexts
         candidate_context_list: List[TargetContext] = []
@@ -239,20 +251,12 @@ class Searcher:
         for upper_candidate_ks, lower_candidate_ks in candidate_context_ks_pairs:
             upper_target_context_code = self.get_line_range(upper_ksi, upper_candidate_ks)
             upper_boundary = self.determine_boundary(upper_ksi, 0, upper_target_context_code)
-            if (
-                (-1, -1) in upper_boundary
-                or upper_boundary[0][0] > upper_boundary[1][0]
-                or upper_boundary[0][1] > upper_boundary[1][1]
-            ):
+            if (-1, -1) in upper_boundary:
                 continue
 
             lower_target_context_code = self.get_line_range(lower_ksi, lower_candidate_ks)
             lower_boundary = self.determine_boundary(lower_ksi, 1, lower_target_context_code)
-            if (
-                (-1, -1) in lower_boundary
-                or lower_boundary[0][0] > lower_boundary[1][0]
-                or lower_boundary[0][1] > lower_boundary[1][1]
-            ):
+            if (-1, -1) in lower_boundary:
                 continue
 
             candidate_context = TargetContext(

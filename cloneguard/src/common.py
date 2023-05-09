@@ -12,31 +12,32 @@ import structlog
 
 
 class Filter(object):
-    extensions = {"py", "c", "cpp", "go", "h", "hpp"}
+    extensions = {"py", "c", "cpp", "go"}  # , "h", "hpp"}
     _re_lang_comment = {
         "py": r'\s*(#|""").*?{}',
         "c": r"\s*(/\*|//|/\*\*).*?{}",
         "h": r"\s*(/\*|//|/\*\*).*?{}",
-        "cpp": r"\s*(/\*|//|/\*\*).*?{}",
-        "hpp": r"\s*(/\*|//|/\*\*).*?{}",
+        "cpp": r"\s*(/\*|//|/\*\*|\*|\*/).*?{}",
+        "hpp": r"\s*(/\*|//|/\*\*|\*|\*/).*?{}",
         "go": r"\s*(//|/\*).*?{}",
         "hs": r"\s*(--|{-).*?{}",
     }
     _re_brackets = re.compile(r"\s*[\[\](){}]+\s*(?:[;,]\s*)?$")
     __c_keywords = {
-        "auto",
-        "bool",
-        "char",
-        "const",
-        "false",
-        "float",
-        "int",
-        "long",
-        "return",
-        "short",
-        "signed",
-        "unsigned",
-        "void",
+        "if",
+        # "auto",
+        # "bool",
+        # "char",
+        # "const",
+        # "false",
+        # "float",
+        # "int",
+        # "long",
+        # "return",
+        # "short",
+        # "signed",
+        # "unsigned",
+        # "void",
     }
     _lang_frequent_keywords = {
         "py": {
@@ -59,7 +60,7 @@ class Filter(object):
         "cpp": __c_keywords,
         "h": __c_keywords,
         "hpp": __c_keywords,
-        "go": {"uint64", "var"},
+        "go": {"if"},
     }
 
     @classmethod

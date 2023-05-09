@@ -48,7 +48,9 @@ class FixCommitFinder:
         "merge_commit": re.compile(r"(?:Merge\s*.*?#\d+:)?\s*([\w-]+):"),
         "commit": re.compile(r"(\w{40}) +(.+)"),
         "commit_message": re.compile(r"([\w-]+): .+"),
-        "cwe": re.compile(r"DOS|overflow|underflow|race|deadlock|infinite|leak|insecure|bypass"),
+        "cwe": re.compile(
+            r"\b(DOS|overflow|underflow|race|deadlock|leak|insecure|bypass|injection)\b", flags=re.IGNORECASE
+        ),
     }
 
     _keyword_count = 10
@@ -70,7 +72,7 @@ class FixCommitFinder:
         self.stored_cve = self.check_db(cve)
         if cache and self.stored_cve:
             return
-        if "PR#" in cve:
+        if not cve.startswith("CVE-"):
             return
 
         self.cve: CVE = CVEClient().cve_id(cve)
@@ -120,7 +122,7 @@ class FixCommitFinder:
                     return True
             return False
 
-        time_window = dt.datetime.now() - dt.timedelta(days=3)  # TODO: just tmp 3 days
+        time_window = dt.datetime.now() - dt.timedelta(days=1)
         recent_commits = self.repo.rev_list(after=time_window.strftime("%Y-%m-%d"))
 
         candidates = []

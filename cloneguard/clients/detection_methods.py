@@ -37,35 +37,60 @@ class SimianDetection:
 class Simian:
     simian_jar_path = "cloneguard/simian-2.5.10.jar"
     _re_duplicate_block = re.compile(r"Found.*?(?=Found)", flags=re.S)
-    _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d*)\s*in\s*(.*?)\n")
+    _re_duplicate_lines = re.compile(r"\s*Between\s*lines\s*(\d+)\s*and\s*(\d+)\s*in\s*(\S+)")
+
+    _known_languages = ["java", "c", "cpp"]
 
     def __init__(self, source: Git, bug: Bug):
         if not os.path.exists(f"{self.simian_jar_path}"):
             logger.error("clients: simian: Simian not found.")
             return
-        self.threshold = bug.code.count("\n") or 1  # threshold must be > 0
-        self.test_file = f"tmp.simian"
+        code = base64.b64decode(bug.code).decode("ascii")
+        self.threshold = code.count("\n") or 1  # threshold must be > 0
+        self.test_file = f"tmp.simian.{source.language}"
         with open(self.test_file, "w", encoding="UTF-8") as file:
-            file.write(base64.b64decode(bug.code).decode("utf-8"))
+            file.write(code)
 
         logger.info("clients: detection_methods: Simian ready.")
 
     @log_wrapper
     def run(self, repo: Git) -> List[SimianDetection]:
         files = f"{repo.path_to_repo}/**/*.{repo.language}"
-        command = ["java", "-jar", self.simian_jar_path, f"-threshold={self.threshold}", self.test_file, files]
+        command = [
+            "java",
+            "-jar",
+            self.simian_jar_path,
+            f"-threshold={self.threshold}",
+        ]
+        command += [f"-language={repo.language}"] if repo.language in self._known_languages else []
+        command += [self.test_file, files]
         logger.info(f"clients: detection_methods: simian exec: {' '.join(command)}")
         process = subprocess.run(command, stdout=subprocess.PIPE)
         result = process.stdout.decode(errors="replace")
 
         detections = []
+        cwd = os.getcwd()
+
+        # parse output
         for block in self._re_duplicate_block.finditer(result):
             _detections = []
+            is_test_duplicate = False
+
             for detection in self._re_duplicate_lines.finditer(block.group(0)):
-                _detections.append(SimianDetection(*detection.groups()))
-            if f"{os.getcwd()}/{self.test_file}" not in [d.file for d in _detections]:
+                _det = SimianDetection(*detection.groups())
+                _detections.append(_det)
+
+                if _det.file == f"{cwd}/{self.test_file}":
+                    is_test_duplicate = True
+
+            if not is_test_duplicate:
                 continue
             detections += _detections
+
+        if detections:
+            logger.info(f"Applied patch: [{(False, 1.0, '')}]", repo=repo.repo)
+        else:
+            logger.info(f"Applied patch: [{(True, 1.0, '')}]", repo=repo.repo)
         return detections
 
 
@@ -84,8 +109,19 @@ class BlockScope:
             if bug.patch
             else extractor.get_patch_from_commit(source, bug.commits[0])
         )
-        self.patch_contexts = [extractor.extract(patch=patch) for patch in patches]
-        self.patch_codes = [PatchCode(patch).fetch() for patch in patches]
+        if bug.patch and bug.patch.startswith("commit "):
+            patches = extractor.get_patch_from_commit_str(bug.patch)
+        self.patch_contexts = []
+        self.patch_codes = []
+        for patch in patches:
+            try:
+                context = extractor.extract(patch=patch)
+                code = PatchCode(patch).fetch()
+                self.patch_contexts.append(context)
+                self.patch_codes.append(code)
+            except Exception as e:
+                logger.warning(f"clients: detection_methods: BlockScope: {e}")
+                continue
         logger.info("clients: detection_methods: BlockScope ready.")
 
     @log_wrapper
@@ -99,23 +135,32 @@ class BlockScope:
             Detection results.
         """
         patch_applications: list = []
-
-        i: int = 0
         for context, code in zip(self.patch_contexts, self.patch_codes):
-            i += 1
+            # search for code candidates in target repository
             search_result = Searcher(context, repo).search(len(code.code))
+
+            # evaluate patch applications for each candidate code
             applications = [Comparator.determine_patch_application(code, candidate) for candidate in search_result]
-            applications = [application for application in applications if application[0] is not None]
+            applications = list(filter(lambda x: x[0] is not None, applications))
             logger.info(f"Patch part application statuses: {applications}", repo=repo.repo)
+
             if not applications:
+                # clone not detected
                 patch_applications.append(())
                 continue
+
             # select the one with the highest similarity, thus the highest confidence
             patch_applications.append(max(applications, key=lambda x: x[1]))
 
         logger.info(f"Applied patch: {patch_applications}", repo=repo.repo)
 
-        vulnerable = [] if not patch_applications[0] else [res for res in patch_applications if not res[0]]
+        # filter out empty results
+        patch_applications = list(filter(lambda x: x, patch_applications))
+
+        # check if any patch part is not applied
+        vulnerable = [res for res in patch_applications if not res[0]]
+
+        # if any part is not applied, the repository did not apply the patch, thus still potentially vulnerable
         not_applied = None if not vulnerable else max(vulnerable, key=lambda x: x[1])
         if not_applied:
             crud.detection.create(db_session, Detection(confidence=not_applied[1], bug=self.bug.id, project=repo.id))

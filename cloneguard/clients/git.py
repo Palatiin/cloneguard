@@ -29,13 +29,16 @@ class Git:
     """
 
     api = GitHubAPI()
-    _re_url_contents = re.compile(r"[/:](?P<owner>\w+)/(?P<repo>\w+)\.git")
+    _re_url_contents = re.compile(r"https.*?/(?P<owner>[-\w_]+)/(?P<repo>[-\w_]+)\.git")
 
     base_path = f"{CACHE_PATH}/clones"
 
     @log_wrapper
     def __init__(self, project: str | Project):
         project = project if isinstance(project, Project) else crud.project.get_by_name(db_session, project)
+
+        if not project:
+            raise Exception(f"Project {project} not found in database.")
 
         self.id = project.id
         self.url = project.url
@@ -95,6 +98,12 @@ class Git:
         for _hash in hashes:
             yield _hash, self.show(_hash, quiet=True)
 
+    def log(self, before: str):
+        command = ["git", "log", "--oneline", "--before", before, "-n 1"]
+        logger.info("git: log: Command: " + " ".join(command), repo=self.repo)
+        process = subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE, universal_newlines=True)
+        return process.stdout.split()[0]
+
     def show(self, _hash: str, quiet: Optional[bool] = True, context: int = 0) -> str:
         command = ["git", "show", "--date=iso"]
         command += ["--quiet"] if quiet else []
@@ -147,16 +156,13 @@ class Git:
         self.checkout()
 
         command = ["git", "pull"]
-        logger.info("git: sync Command: " + " ".join(command), repo=self.repo)
+        logger.info("git: sync: Command: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)
 
         self.checkout()  # digibyte automatically switches to branch `develop`
 
     def get_version_from_date(self, date: str) -> NoReturn:
-        rev_list = self.rev_list(before=date)
-        rev = next(rev_list)[0]
-        del rev_list
-
-        command = ["git", "reset", "--hard", rev]
+        commit = self.log(before=date)
+        command = ["git", "reset", "--hard", commit]
         logger.info("git: get_version_from_date: " + " ".join(command), repo=self.repo)
         subprocess.run(command, cwd=self.path_to_repo, stdout=subprocess.PIPE)

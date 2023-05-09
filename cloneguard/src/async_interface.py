@@ -135,9 +135,10 @@ async def update_bug(data: UpdateBugSchema) -> BugModel:
 
         # update fix commits of the record
         if data.fix_commit:
-            bug.commits = data.fix_commit
+            bug.commits = [data.fix_commit]
 
         # commit changes
+        bug.verified = True
         crud.bug.update(db_session, bug)
 
         return BugModel(
@@ -181,13 +182,13 @@ async def search_bugs(data: SearchRequestSchema) -> SearchResultModel:
         # search bug details - fix commits, patch
         try:
             project = Git(project)
-            bug = FixCommitFinder(project, data.bug_id).get_bug()
+            bug = FixCommitFinder(project, data.bug_id.upper(), True).get_bug()
         except Exception as e:
             raise InternalServerError(e)
 
         return SearchResultModel(
             commits=bug.commits,
-            patch=bug.patch,
+            patch=bug.patch or "",
         )
 
     except ValidationError as e:
@@ -255,12 +256,12 @@ async def execute_detection_method(data: DetectionMethodExecutionSchema):
     """
     try:
         # validate input data
-        if not data.bug_id or not data.commit or not data.patch:
-            raise ValidationError("Missing value: bug_id or commit or patch")
+        if not data.bug_id or not data.commit:
+            raise ValidationError("Missing value: bug_id or commit")
 
         # schedule detection task
         redis_conn = redis.Redis.from_url(REDIS_URL)
-        queue = Queue("task_queue", connection=redis_conn, default_timeout=600)
+        queue = Queue("task_queue", connection=redis_conn, default_timeout=900)
         queue.enqueue(
             execute_task,
             data.bug_id,
@@ -301,7 +302,12 @@ async def get_status():
             for match in re.finditer(r"Applied\s*patch:\s*(\[.*?\])\s*repo=(\S+)\b", logs):
                 project = match.group(2)
                 results = orjson.loads(
-                    match.group(1).replace("(", "[").replace(")", "]").replace("False", "false").replace("True", "true")
+                    match.group(1)
+                    .replace("(", "[")
+                    .replace(")", "]")
+                    .replace("False", "false")
+                    .replace("True", "true")
+                    .replace("'", '"')
                 )
                 detections.extend(
                     [
@@ -309,12 +315,13 @@ async def get_status():
                             project_name=project,
                             vulnerable="False" if result[0] else "True",
                             confidence=round(result[1], 3),
-                            location="",  # result[2],
+                            location=result[2],
                         )
                         for result in results
                         if result
                     ]
                 )
+            detections = sorted(detections, key=lambda x: x.project_name)
         except Exception as e:
             raise InternalServerError(e)
 

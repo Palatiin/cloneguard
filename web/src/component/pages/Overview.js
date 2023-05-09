@@ -7,7 +7,6 @@
 import React, {useState, useEffect} from "react";
 import styled from "@emotion/styled";
 import {
-    Container,
     Stack,
     Divider,
     Typography,
@@ -129,7 +128,7 @@ const Overview = () => {
         post("/bug/update", {
             id: id,
             patch: btoa(patch),
-            fix_commit: fixCommit ? '["'+fixCommit+'"]' : "",
+            fix_commit: fixCommit ? fixCommit : "",
             method: method,
         })
             .then((resp) => {
@@ -269,6 +268,8 @@ const Overview = () => {
                         id="patch"
                         label="Patch/Code"
                         variant="outlined"
+                        multiline
+                        rows={1}
                         value={patch}
                         onChange={(e) => setPatch(e.target.value)}
                     />

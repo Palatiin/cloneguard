@@ -28,6 +28,7 @@ class Extractor:
     """Extractor of patch context."""
 
     _re_token = re.compile(r"[a-zA-Z0-9!._]+")
+    _killer_keywords = {"if"}
 
     def __init__(self, lang: str, context_lines: Optional[int] = 5):
         self.context_lines = context_lines
@@ -49,11 +50,14 @@ class Extractor:
 
         Raises ContextExtractionError if the lines do not contain additions/deletions.
         """
-        # def get_keyword(line: str) -> str:
-        #     tokens = sorted(self._tokenize(line))
-        #     for token in tokens:
-        #
-        #     return tokens[0]
+
+        def get_keyword(line: str) -> str | None:
+            tokens = sorted(self._tokenize(line), key=len, reverse=True)
+            for token in tokens:
+                if token not in self._killer_keywords and len(token) > 2:
+                    return token
+            return None
+
         context = Context()
 
         for line in lines:
@@ -66,9 +70,7 @@ class Extractor:
                 continue  # filter unimportant lines like comments
 
             # select keyword representing the sentence
-            tokens = self._tokenize(line)
-            keyword = max(tokens, key=len)
-            context.sentence_keyword_pairs.append((line, keyword))
+            context.sentence_keyword_pairs.append((line, get_keyword(line)))
         else:  # went through all lines, but didn't find any editing
             raise ContextExtractionError("No additions/deletions in patch code.")
 
@@ -97,12 +99,10 @@ class Extractor:
         return upper_context, lower_context
 
     @staticmethod
-    def get_patch_from_commit(repo: Git, commit: str, context: int = 10) -> List[List[str]]:
-        diff = repo.show(commit, quiet=False, context=context)
-        parsed_diff = GitParser().parse_diff(diff)
-
+    def _process_parsed_diff(parsed_diff):
         relevant_files = [file for file in parsed_diff["affected_files"] if not Filter.file(filename=file)]
         patch_list = []
+
         for file in relevant_files:
             file_ext = Path(file).suffix[1:]
             for block in parsed_diff[file]["affected_lines"]:
@@ -116,3 +116,13 @@ class Extractor:
                 patch_list.append(patch)
 
         return patch_list
+
+    def get_patch_from_commit(self, repo: Git, commit: str, context: int = 10) -> List[List[str]]:
+        diff = repo.show(commit, quiet=False, context=context)
+        parsed_diff = GitParser().parse_diff(diff)
+
+        return self._process_parsed_diff(parsed_diff)
+
+    def get_patch_from_commit_str(self, commit_str: str) -> List[List[str]]:
+        parsed_diff = GitParser().parse_diff(commit_str)
+        return self._process_parsed_diff(parsed_diff)

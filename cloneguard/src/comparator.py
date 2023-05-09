@@ -52,19 +52,20 @@ class Comparator:
     @classmethod
     def determine_patch_application(cls, patch: PatchCode, target: CandidateCode):
         assert patch.type != PatchType.NDF, "Patch type is not defined."
+        location = f"{target.context.key_statements[0].filename}:{target.context.upper_code[-1][0] + 1}"
 
         if patch.type == PatchType.DEL:
             if not len(target.code):  # prevent ZeroDivisionError in compare method
-                return True, target.context.similarity
+                return True, target.context.similarity, location
             if (sim := cls.compare(target.code, patch.sanitize())) >= cls._threshold:
-                return False, sim
-            return True, sim
+                return False, sim, location
+            return True, sim, location
         elif patch.type == PatchType.ADD:
             if not len(target.code):  # prevent ZeroDivisionError in compare method
-                return False, target.context.similarity
+                return False, target.context.similarity, location
             if (sim := cls.compare(target.code, patch.sanitize())) >= cls._threshold:
-                return True, sim
-            return False, sim
+                return True, sim, location
+            return False, sim, location
         elif patch.type == PatchType.CHG:
             add_sim = 0.0
             if not len(target.code):
@@ -74,6 +75,6 @@ class Comparator:
             ) >= cls._threshold:
                 sim = del_sim + add_sim
                 if del_sim >= add_sim:
-                    return False, sim
-                return True, sim
-            return None, del_sim + add_sim
+                    return False, sim, location
+                return True, sim, location
+            return None, del_sim + add_sim, location

@@ -44,6 +44,11 @@ class CRUDBase(t.Generic[ModelType]):
 
 
 class CRUDBug(CRUDBase[Bug]):
+    def create(self, db: Session, obj: ModelType) -> ModelType:
+        if _obj := self.get_cve(db, obj.cve_id):
+            return _obj
+        return super().create(db, obj)
+
     def get_cve(self, db: Session, cve: str) -> t.Optional[ModelType]:
         return db.query(self.model).filter_by(cve_id=cve).first()
 
@@ -65,7 +70,7 @@ class CRUDProject(CRUDBase[Project]):
 class CRUDDetection(CRUDBase[Detection]):
     def create(self, db: Session, obj: ModelType) -> ModelType:
         if _obj := self.get_by_bug_and_project_id(db, obj.bug, obj.project):
-            return _obj
+            super().delete(db, _obj)
         return super().create(db, obj)
 
     def get_by_bug_and_project_id(self, db: Session, bug_id: int, project_id: int) -> t.Optional[ModelType]:

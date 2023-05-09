@@ -7,3 +7,7 @@
 
 class ContextExtractionError(Exception):
     ...
+
+
+class CLIError(Exception):
+    ...
