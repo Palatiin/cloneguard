@@ -13,19 +13,20 @@ Scans the recent updates in watched parent projects for suspicious commits.
 ---
 
 ### Installation
-CloneGuard consists of multiple services. To run them, you need to install Docker and Docker Compose.
-
-* `docker-compose build` - build all services
-
----
-
-### Usage
 #### Prerequisites
 Initialize environment variables in `.env` file:
 * `GITHUB_API_ACCESS_TOKEN` - GitHub personal access token (see [GitHub Docs](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/creating-a-personal-access-token))
 * `SMTP_LOGIN` - SMTP login for sending email notifications
 * `SMTP_PASSWORD` - SMTP password for sending email notifications
 
+CloneGuard consists of multiple services. To run them, you need to install Docker and Docker Compose.
+
+#### Build
+* `docker-compose build` - build all services
+
+---
+
+### Usage
 #### Initialize the database
 * `docker-compose run db` - start DB
 * `docker-compose exec db sh` - connect to the container
