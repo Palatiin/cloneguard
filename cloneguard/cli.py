@@ -31,6 +31,8 @@ logger = structlog.get_logger(__name__)
 
 
 def session_wrapper(func):
+    """DB session wrapper for CLI commands."""
+
     def inner_wrapper(*args, **kwargs):
         with DBSession():
             result = func(*args, **kwargs)
@@ -118,6 +120,7 @@ def scan(every: str = ""):
         return None
 
     if every:
+        # set up schedule
         cron_time = to_cron_syntax(every)
         if not cron_time:
             return
@@ -151,6 +154,8 @@ def scan(every: str = ""):
 @click.argument("language", type=str)
 @click.option("--parent", type=str, default=None)
 def register(url: str, language: str, parent: str | None):
+    """Register new project."""
+
     @session_wrapper
     def wrapped_register():
         logger.info("cli: Registering project...")
@@ -188,6 +193,7 @@ def register(url: str, language: str, parent: str | None):
 
 @cli.command()
 def db_init():
+    """Clear and initialize database schema."""
     from cloneguard.src.db.session import DBSchemaSetup
 
     # from cloneguard.utils.db_init import init

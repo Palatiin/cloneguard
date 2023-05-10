@@ -55,6 +55,14 @@ class Simian:
 
     @log_wrapper
     def run(self, repo: Git) -> List[SimianDetection]:
+        """Run Simian detection method.
+
+        Args:
+            repo (Git): Cloned repository, which will be analysed
+
+        Returns:
+            Detection results.
+        """
         files = f"{repo.path_to_repo}/**/*.{repo.language}"
         command = [
             "java",

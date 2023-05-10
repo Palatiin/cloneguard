@@ -21,6 +21,11 @@ from cloneguard.src.schemas import CandidateCode, Sentence, TargetContext
 
 
 class Searcher:
+    """Component for searching candidate code in the target repository.
+
+    Utilizes textual context-based similarity. The process is started in a method 'Searcher.search'.
+    """
+
     _levenshtein_threshold = 0.25
 
     def __init__(self, context: Tuple[Context, Context], target_repo: Git):
@@ -33,6 +38,17 @@ class Searcher:
 
     @staticmethod
     def process_line(line, keyword, key_sentence, levenshtein_threshold):
+        """Process line of code from grep output.
+
+        Args:
+            line (str): line of code from grep output
+            keyword (str): searched keyword
+            key_sentence (str): sentence containing keyword
+            levenshtein_threshold (float): threshold for levenshtein similarity
+
+        Returns:
+            Tuple[Sentence, float] | None: sentence and its similarity with key_sentence
+        """
         try:
             file, line_number, sentence = line.split(":", 2)
         except Exception as e:
@@ -47,7 +63,6 @@ class Searcher:
         sim = Comparator.similarity(sentence, key_sentence)
         if sim <= levenshtein_threshold:
             return None
-        # TODO filter based on sentence type
         sentence = Sentence(file, file_extension, int(line_number), sentence)
         return sentence, sim
 
@@ -206,7 +221,14 @@ class Searcher:
 
     @log_wrapper
     def search(self, patch_length: int) -> List[CandidateCode]:
-        """Find and return candidate codes in target repository."""
+        """Find and return candidate codes in target repository.
+
+        Args:
+            patch_length (int): count of patch lines
+
+        Return:
+            List[CandidateCode] : List of candidate codes
+        """
         key_statement_pos = [[-1, -1, 0], [-1, -1, 0]]
 
         # find key statements
@@ -217,7 +239,7 @@ class Searcher:
             for j, sentence_keyword_pair in enumerate(context.sentence_keyword_pairs):
                 sentence, keyword = sentence_keyword_pair
 
-                if not keyword:  # skip forbidden keywords - e.g. 'if', 'for', 'while' - they are not extracted
+                if not keyword:  # skip forbidden keywords - e.g. 'if' - they are not extracted
                     continue
                 occurrences, count = self.find_occurrences(keyword, sentence.strip())
 
@@ -227,6 +249,7 @@ class Searcher:
                 occurrence: Tuple
                 max_similarity_index, occurrence = max(enumerate(occurrences), key=lambda x: x[1][1])
 
+                # select the most similar context sentence as a key statement
                 if occurrence[1] > key_statement_pos[i][2]:
                     key_statement_pos[i] = [j, max_similarity_index, occurrence[1]]
                     ks_occurrences[i] = occurrences
@@ -248,7 +271,9 @@ class Searcher:
         # create list of candidate contexts
         candidate_context_list: List[TargetContext] = []
 
+        # fetch candidate code
         for upper_candidate_ks, lower_candidate_ks in candidate_context_ks_pairs:
+            # extend one line key statement to multi line context
             upper_target_context_code = self.get_line_range(upper_ksi, upper_candidate_ks)
             upper_boundary = self.determine_boundary(upper_ksi, 0, upper_target_context_code)
             if (-1, -1) in upper_boundary:
@@ -266,6 +291,7 @@ class Searcher:
                 lower_code=lower_target_context_code,
             )
 
+            # filter candidate context based on similarity to patch context
             if not self._check_candidate_context_similarity(candidate_context):
                 continue
             candidate_context_list.append(candidate_context)

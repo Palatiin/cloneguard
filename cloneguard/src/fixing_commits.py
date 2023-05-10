@@ -196,7 +196,6 @@ class FixCommitFinder:
         if pull_request["merged"]:
             pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, pull_request["number"])
             return self._select_commit(pull_commits)
-        # TODO: if not merged
 
     def release_notes_scan(self) -> List[str] | str:
         change_log = []
@@ -251,7 +250,6 @@ class FixCommitFinder:
             candidate_commits["commits"].append((_hash, weight, commit))
 
         commits = sorted(candidate_commits["commits"], key=lambda x: x[1], reverse=True)
-        # TODO: if 'Merge' in commit, pull scan?
         return [commit[0] for commit in commits]
 
     @staticmethod
@@ -304,10 +302,10 @@ class FixCommitFinder:
 def get_tag_range(cve: CVE) -> str:
     fix_tag = ""
     for reference in cve.references:
-        if match := re.search(r"github.*?bitcoin.*?v(\d)\.(\d{,2})\.(\d{,2})", reference.url):
+        if match := re.search(r"github.*v(\d)\.(\d{,2})\.(\d{,2})", reference.url):
             fix_tag = match
             break
-        if match := re.search(r"bitcoincore.*?release-(\d)\.(\d{,2})\.(\d{,2})", reference.url):
+        if match := re.search(r"release-(\d)\.(\d{,2})\.(\d{,2})", reference.url):
             fix_tag = match
             break
 

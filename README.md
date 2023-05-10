@@ -10,6 +10,8 @@ Runs a detection of a specific vulnerability in forked projects.
 #### Discovery Scan
 Scans the recent updates in watched parent projects for suspicious commits.
 
+The recipients can be configured in variable NOTIFY_LIST in file cloneguard/settings.py
+
 ---
 
 ### Installation
