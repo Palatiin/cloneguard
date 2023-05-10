@@ -176,6 +176,7 @@ class Searcher:
         return determine_start(), determine_end()
 
     def _check_candidate_context_similarity(self, candidate_context: TargetContext) -> bool:
+        """Check similarity of candidate context to patch context."""
         upper_boundary, lower_boundary = candidate_context.boundary
         upper_cctx = [line[1] for line in candidate_context.upper_code[upper_boundary[0][1] : upper_boundary[1][1] + 1]]
         lower_cctx = [line[1] for line in candidate_context.lower_code[lower_boundary[0][1] : lower_boundary[1][1] + 1]]
@@ -191,6 +192,7 @@ class Searcher:
         return False
 
     def _get_candidate_code_list(self, candidates: List[TargetContext], patch_lenght: int) -> List[CandidateCode]:
+        """Candidate code fetcher."""
         candidate_code_list: List[CandidateCode] = []
 
         for candidate in candidates:

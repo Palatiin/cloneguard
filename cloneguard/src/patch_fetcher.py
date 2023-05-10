@@ -18,6 +18,8 @@ class PatchType(int, Enum):
 
 
 class PatchCode:
+    """Class for fetching and parsing patch code."""
+
     def __init__(self, patch: str | List[str]):
         self.patch: List[str] = patch.splitlines() if isinstance(patch, str) else patch
         self.deletions: int = 0

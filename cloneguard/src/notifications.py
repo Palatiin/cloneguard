@@ -17,6 +17,8 @@ from cloneguard.clients.git import Git
 
 
 class Postman(object):
+    """Class for sending email notifications."""
+
     smtp_server: str = "smtp.gmail.com"
     smtp_port: int = 587
 
@@ -24,6 +26,7 @@ class Postman(object):
         self.logger = structlog.get_logger(__name__)
 
     def notify_bug_detection(self, commits: List[str], repo: Git):
+        """Send email notification about detected bug-fixes."""
         message = MIMEMultipart()
         message["From"] = auth.SMTP_LOGIN
         message["To"] = "xremen01@stud.fit.vutbr.cz"
@@ -44,6 +47,7 @@ class Postman(object):
         self._notify(message)
 
     def _notify(self, message):
+        """Send email notification."""
         try:
             with smtplib.SMTP(self.smtp_server, self.smtp_port) as server:
                 server.starttls()

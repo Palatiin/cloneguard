@@ -28,6 +28,8 @@ nltk.download("averaged_perceptron_tagger", quiet=True)
 
 
 class FixCommitFinder:
+    """Patch commit finder."""
+
     work_flow = [
         "issue_scan",
         "pull_scan",
@@ -83,6 +85,7 @@ class FixCommitFinder:
         self.cve_keywords: Set[str] = self._extract_keywords(self.cve.descriptions["en"][0])
 
     def _categorize_references(self):
+        """Sort references into particular groups."""
         for ref in self.cve.references:
             match ref.type_:
                 case ReferenceType.commit:
@@ -95,12 +98,24 @@ class FixCommitFinder:
                     self.release_notes.append(ref)
 
     def _extract_keywords(self, text: str, lang: str = "english") -> Set[str]:
+        """Extract keywords from description.
+
+        Args:
+            text (str): CVE description
+            lang (str): language of description
+
+        Returns:
+            Set[str]: set of keywords
+        """
         kwords = nltk.word_tokenize(text, language=lang)
         kwords = nltk.pos_tag(kwords)
-        kwords = [x for x in kwords if x[1][:2] in self._whitelisted_word_tags and "bitcoin" not in x[0].lower()]
+        kwords = [
+            x for x in kwords if x[1][:2] in self._whitelisted_word_tags and self.repo.repo.lower() not in x[0].lower()
+        ]
         return set([kw[0] for kw in kwords])
 
     def get_bug(self) -> Bug | None:
+        """Get bug DB object storing fix commits."""
         fix_commits = self.get_fix_commit()
         if not fix_commits:
             return None
@@ -116,6 +131,8 @@ class FixCommitFinder:
         return self.stored_cve
 
     def scan_recent(self):
+        """Discovery scan of recent commits."""
+
         def ignore_commit(_commit):
             if match := self._res["commit_message"].match(_commit.strip()):
                 if match.group(1) in self.IGNORED_COMMITS:
@@ -148,6 +165,7 @@ class FixCommitFinder:
 
     @log_wrapper
     def get_fix_commit(self) -> List[str]:
+        """Get candidate fix commit for CVE from its references or using its keywords."""
         if self.stored_cve:
             if self.stored_cve.commits:
                 return self.stored_cve.commits
@@ -183,6 +201,7 @@ class FixCommitFinder:
         return fix_commits
 
     def issue_scan(self) -> str:
+        """Scan issue reference for fix commit."""
         for pulls in self._is_get_pull_reference():
             for pull in pulls:
                 pull_request = self.repo.api.get_pull(self.repo.owner, self.repo.repo, int(pull))
@@ -192,12 +211,14 @@ class FixCommitFinder:
                 return self._select_commit(pull_commits)
 
     def pull_scan(self) -> str:
+        """Scan pull reference for fix commit."""
         pull_request = self.pull.json
         if pull_request["merged"]:
             pull_commits = self.repo.api.get_commits_on_pull(self.repo.owner, self.repo.repo, pull_request["number"])
             return self._select_commit(pull_commits)
 
     def release_notes_scan(self) -> List[str] | str:
+        """Scan release notes reference for fix commit."""
         change_log = []
 
         for match in self._res["release_notes"]["change_log_1"].finditer(self.release_notes.body):
@@ -224,14 +245,13 @@ class FixCommitFinder:
 
         # sort by information value
         change_log = sorted(change_log, key=lambda x: x[3], reverse=True)
-        # _change_log = list(filter(lambda x: x[3] > 0, change_log))
-        # change_log = _change_log or change_log
 
         commits = [commit["sha"] for log in change_log for commit in log[4]]
 
-        return commits  # self._select_commit(change_log[0][4])
+        return commits
 
     def default_scan(self) -> List[str]:
+        """Scan based on description keywords."""
         _after = f"{self.cve.published - dt.timedelta(days=10):%Y-%m-%d}"
         _before = f"{self.cve.published + dt.timedelta(days=2):%Y-%m-%d}"
         candidate_commits = {"count": 0, "commits": []}
@@ -254,11 +274,13 @@ class FixCommitFinder:
 
     @staticmethod
     def check_db(cve: str):
+        """Check if CVE is already in database."""
         if cve := crud.bug.get_cve(db_session, cve):
             return cve
         return None
 
     def _is_get_pull_reference(self):
+        """Check if issue reference is a pull request."""
         issue_timeline = self.repo.api.get_issue_timeline(self.repo.owner, self.repo.repo, self.issue.json["number"])
         start_index = len(issue_timeline)
 
@@ -275,13 +297,15 @@ class FixCommitFinder:
                     yield match
 
     def _rn_change_log_eval(self, text):
+        """Evaluate change log text."""
         value = 0
         for keyword in self.cve_keywords:
             if keyword in text:
                 value += 1
         return value
 
-    def _select_commit(self, commits, kw_check: bool = False):
+    def _select_commit(self, commits):
+        """Select commit from list of commits."""
         if not commits:
             return
         commits = commits[::-1]
@@ -300,14 +324,20 @@ class FixCommitFinder:
 
 
 def get_tag_range(cve: CVE) -> str:
+    """Get tag range for CVE fixing commit."""
     fix_tag = ""
     for reference in cve.references:
-        if match := re.search(r"github.*v(\d)\.(\d{,2})\.(\d{,2})", reference.url):
-            fix_tag = match
-            break
-        if match := re.search(r"release-(\d)\.(\d{,2})\.(\d{,2})", reference.url):
-            fix_tag = match
-            break
+        try:
+            if match := re.search(r"github.*v(\d)\.(\d{,2})\.(\d{,2})", reference.url):
+                fix_tag = match
+                break
+            if match := re.search(r"release-(\d)\.(\d{,2})\.(\d{,2})", reference.url):
+                fix_tag = match
+                break
+        except Exception as e:
+            pass
+    else:
+        return ""
 
     if not isinstance(fix_tag, re.Match):
         return ""
