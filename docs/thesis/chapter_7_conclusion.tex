@@ -1,0 +1,30 @@
+% File: src/chapter_7_conclusion.tex
+% Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+% Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+% Description: Chapter 7 - Conclusion
+
+\chapter{Conclusion}
+\label{chapter:conclusion}
+% ciel a na com sa pracovalo
+The primary goal of this thesis was to develop a tool for detecting and monitoring cloned vulnerabilities in open-source projects.
+In the scope of this work, the detection tool was designed, implemented, and evaluated on a set of real-world examples.
+
+The introductory chapter of this thesis presented motivation and insights discussing vulnerabilities in software applications,
+secure coding practices, identifiers used for describing weaknesses and databases storing them.
+The following chapter introduced clones of source code, their types, methods and existing tools for their detection.
+Accordingly, the design choices, the implementation details of a monitoring tool for the detection of cloned vulnerabilities
+and its capabilities were presented.
+
+The designed tool provides options to detect the propagation of specific vulnerabilities and to set up periodic monitoring
+of selected open-source projects in user-friendly interfaces. The tool currently supports two clone detection
+methods based on prior research. The first method utilizes a tool \emph{Simian} for detecting duplicate code fragments capable of
+detecting only Type~I clones, while the second method implements detection based on a textual similarity between the target code
+and patch, which locates the target code based on its context. The second method, BlockScope, is capable of detecting not only Type I clones but also Type II~and Type~III clones. These represent syntactically similar code fragments that differ through variable renaming or the addition or deletion of code statements. While the first three types of clones were detected by the implemented tool with
+a sufficient rate as discussed in the final evaluation, it does not cover Type IV. Clones of Type IV, which are syntactically
+different but semantically similar fragments of code are not covered by either of these methods, which might be the topic for
+future work and extension for the implemented tool.
+
+This thesis has provided insights into the issue of cloned vulnerabilities, and the proposed monitoring tool demonstrates
+the potential for detecting and mitigating such vulnerabilities in a timely and efficient manner. The findings and the developed
+tool can contribute to improving the security of software systems in the area of cloned vulnerability detection and mitigation
+across open-source projects while providing a scalable architecture for future extensions and related research.

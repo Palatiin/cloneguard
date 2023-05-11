@@ -1,0 +1,56 @@
+% File: src/chapter_1_introduction.tex
+% Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+% Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+% Description: Chapter 1 - Introduction
+
+\chapter{Introduction}
+  Vulnerabilities in software can have serious consequences, including reputation damage,
+  financial losses, or even loss of life in the case of critical infrastructure systems. Most of them
+  are introduced during the development process as a~result of hidden errors, which might not appear
+  suspicious initially. The system and its users or their data are at risk until the flaws are patched.
+  That is the main reason and motivation why it is important to constantly improve the security of products.
+
+  Cloned vulnerabilities are security weaknesses that are introduced into the~software system
+  when code is copied or reused from another system that contains the vulnerability.
+  These vulnerabilities can be difficult to detect and fix because they are not necessarily introduced
+  by intention, instead, they are inherited from the source code that was copied or reused. In software
+  engineering, the approach of cloning similar functional parts already implemented in other applications
+  is usually applied. It makes the development of new products or adding features to existing ones swifter.
+
+  Cryptocurrencies, which became very popular in recent years, are a good example of this case.
+  Namely, Bitcoin, an Open-Source peer-to-peer electronic cash system created by Satoshi Nakamoto~\cite{bitcoin}
+  inspired many new projects that joined the cryptocurrency market. Lots of them were created
+  as derivatives of Bitcoin with the idea to extend or improve its features. Cloning helped to speed up
+  the development of new coins by inheriting its base infrastructure.
+
+  Although, neither a~large-scale project developed by the community as Bitcoin is always perfect. Plenty of
+  vulnerabilities were discovered in its code base which were accordingly documented and are stored
+  and tracked in vulnerability databases. As there are many other coins that share its code, it is possible
+  that they also share the same vulnerabilities. The question inspired this work to develop a~monitoring tool
+  with the goal of to analyse the~threat and help with the detection of vulnerable code and its occurrence in
+  cloned projects, as the identification is not an easy but rather costly and exhaustive process
+  and after identification yet also patching the issue is desired.
+
+  The prevalence of code reuse and the increasing complexity of software systems makes cloned vulnerabilities
+  an important issue to consider in software development and maintenance. This thesis aims to study the
+  characteristics and impacts of cloned vulnerabilities and to identify effective approaches for detecting
+  and mitigating them. The proposed tool in this work considers disclosed vulnerabilities which means
+  that the issue was already patched in the project that was originally affected by it. Thanks to this fact
+  the tool can identify an issue, the affected code in the original project, and candidate projects with
+  the~probability of vulnerability inheritance. Additionally, the tool can be configured to run in schedules
+  and identify potential bugs in the monitored project. The identified bugs become candidates for
+  detection of their adoption in projects forked from the monitored project.
+
+  An existing tool, with the same goal described above, was implemented in a~project named CoinWatch~\cite{CoinWatch}
+  with an aim at vulnerabilities in cryptocurrencies. The CoinWatch inspired this work
+  with an idea to bring improvements, extensions, and a~graphical user interface for wider and simplified
+  usage of the tool for detecting and mitigating cloned vulnerabilities.
+
+  This thesis begins with a~basic introduction to the problem and the motivation for why it is relevant
+  to deal with. Chapter \ref{chapter:vulnerabilities} explains and takes a~closer look at vulnerabilities
+  and the basic terminology connected with them. In Chapter \ref{chapter:clonedVulnerabilities}, clones of source
+  code, current detection tools and approaches are described and analyzed. Afterwards, Chapter \ref{chapter:design}
+  describes a~draft of the tool built for detecting cloned vulnerabilities. The next two Chapters
+  \ref{chapter:implementation} and~\ref{chapter:experimentation} contain implementation details
+  and an evaluation of the developed product. The final Chapter \ref{chapter:conclusion} concludes this work
+  with potential improvements for future work.

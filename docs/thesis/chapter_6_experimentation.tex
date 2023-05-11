@@ -1,0 +1,291 @@
+% File: src/chapter_6_experimentation.tex
+% Project: Monitoring and Reporting Tool for Cloned Vulnerabilities across Open-Source Projects
+% Author: Matus Remen (xremen01@stud.fit.vutbr.cz)
+% Description: Chapter 6 - Experimentation
+
+\newcommand{\stimes}{\ensuremath{\times}}
+
+\chapter{Experimentation}
+\label{chapter:experimentation}
+This chapter presents and evaluates the capabilities of the implemented tool. The first section describes the preparation steps,
+including system configuration and data set. Then the results produced by the implemented tool are presented in the following
+section. Finally, the last section summarizes the results, discusses shortcomings and provides suggestions for possible
+improvements and next development.
+
+\section{Preparation}
+Initially, the open-source projects \emph{Bitcoin} and \emph{Go-Ethereum} were selected for experiments because of their
+popularity, according to the list of cryptocurrencies from the website \emph{CoinGecko}\footnote{\href{https://www.coingecko.com}
+{https://www.coingecko.com}}.
+The projects were then registered in the internal database as parent projects and their repositories were cloned to the local
+storage. From the previously mentioned list of cryptocurrencies and based on prior research, projects which adopted source
+code from either \emph{Bitcoin} or \emph{Go-Ethereum} repositories were identified. Accordingly, the identified projects were
+registered in the internal database as their forks and cloned to the local storage.
+
+The data set used for experimentation consists of vulnerabilities with assigned CVE identifiers, discovered in the selected parent
+projects \emph{Bitcon} and \emph{Go-Ethereum}. The vulnerabilities were selected based on the availability of information about
+them, mainly references to patches in order to work with verified data. Accordingly, the web interface was used to create
+entities of the bugs in the internal database and attempt to find bug-fixing candidate commits using the functionality of the
+component \texttt{FixCommitFinder}. The found candidate commits were then manually validated and the bug-fixing code changes were
+extracted, in order to use in the detection method only changes that address patch of the vulnerability. The extracted code
+changes were then used to update the corresponding attributes of the bug entity in the internal database, in order to allow
+this step to be omitted in the subsequent repeated executions of the detection.
+
+The docker environment was configured to use 4~CPU cores to take advantage of implemented multiprocessing features which
+improve the speed of the algorithm and 8~GB of memory for the experimentation. For particular evaluations, the web interface
+was used to execute both detection methods for each vulnerability from the prepared data set. Consequently, the detection
+results were noted and manually verified in the corresponding code bases in order to evaluate the precision of the implemented
+detection methods. Manual verification is needed because the results might contain false detections.
+
+\section{Results}
+This section presents the detection results for the prepared list of vulnerabilities. Selected vulnerabilities are closely
+analysed to address the capabilities and shortcomings of particular implemented detection methods, while the others provide
+only numbers of positive/negative results for the calculation of the success rate.
+The detailed results are compared to the expected outcome of the tool and are presented in tables, where a check mark (\checkmark)
+represents detected patch, a cross (\stimes) represents that patch was not applied but the vulnerable code detected and an empty
+cell means that the clone was not found and vulnerability was not propagated. The results, which do not correspond to reality
+(false positives/negatives) are marked by the red color of the cell. The tables display results from the main detection method,
+which is based on the approach of BlockScope.
+
+\subsection*{Bitcoin-based vulnerabilities}
+A~vulnerability with identifier CVE-2021-3401\footnote{\href{https://nvd.nist.gov/vuln/detail/CVE-2021-3401}
+{https://nvd.nist.gov/vuln/detail/CVE-2021-3401}} was selected for the first experiment, as it is the latest published
+vulnerability according to the list\footnote{\href{https://en.bitcoin.it/wiki/Common_Vulnerabilities_and_Exposures}
+{https://en.bitcoin.it/wiki/Common\_Vulnerabilities\_and\_Exposures}} of weaknesses in \emph{Bitcoin}. The vulnerability was discovered
+in the project \emph{Bitcoin} and might allow an attacker to execute arbitrary code upon passing a~malicious argument
+to the \texttt{bitcoin-qt} program. This was caused by misuse of built-in arguments of GUI framework Qt\footnote{\href{
+https://www.qt.io}{https://www.qt.io}}.
+
+% BTC sv, zen - clones of zcash
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|l|c|c|c|}
+    \hline
+    CVE-2021-3401 & \multicolumn{3}{|c|}{Patch application status over date} \\
+    \hline
+    \multicolumn{1}{|c|}{Project} & 21/02/04\ & 22/05/06\ & 23/05/03 \\
+    \hline
+    bitcoin-abc & \checkmark & \checkmark & \checkmark \\  % T III & T III & T III
+    \hline
+    bitcoin-sv & & & \\
+    \hline
+    BTCGPU & \stimes & \stimes & \stimes \\  % T I & T I & T I
+    \hline
+    dash & \stimes & \checkmark & \checkmark \\  % T I & T II & T II
+    \hline
+    dogecoin & \stimes & \checkmark & \checkmark \\  % T III & T II & T II
+    \hline
+    litecoin & \checkmark & \checkmark & \checkmark \\  % T I & T II & T II
+    \hline
+    pigeoncoin & \stimes & \stimes & \stimes \\  % T III & T III & T III
+    \hline
+    Ravencoin & \stimes & \stimes & \checkmark \\  % T III & T III & T II
+    \hline
+    qtum & \checkmark & \checkmark & \cellcolor{red!25} \\  % T I & T I & T II
+    \hline
+    zcash & & & \\
+    \hline
+    zen & & & \\
+    \hline
+  \end{tabular}
+  \caption{Detection results for CVE-2021-3401 over various versions of the analysed projects.}
+  \label{tab:results-cve-3401}
+\end{table}
+
+The results in Table~\ref{tab:results-cve-3401} show that the vulnerability was propagated to some clones of the project Bitcoin.
+It contains patch application status for three different states of the projects according to the timeline of each project.
+The first, the 4th of February 2021 refers to the date of CVE publishing, and the following display patching progress over time
+with the last date, the 3rd of May 2023, referring to the date of this experiment. The results contain the detection of the first
+three types of clones -- Type~I, Type~II and Type~III.
+
+Projects \emph{bitcoin-abc}, \emph{dogecoin}, \emph{pigeoncoin} and \emph{Ravencoin} contained clones of Type~III. Clones of
+Type~II were found in projects \emph{dash}, \emph{dogecoin} and \emph{Ravencoin} after applying patch and the rest were Type~I
+clones. Projects \emph{bitcoin-sv}, \emph{zcash} and \emph{zen} did not adopt the vulnerable code. Although, there was one
+miss in case of the project \emph{qtum} in the most recent version, where the upper candidate context was missing, thus the
+candidate code was not identified, even when the lower context would be found.
+
+The tool Simian was able to detect vulnerability only in the project \emph{BTCGPU} containing Type~I clone, when run with code
+fragment containing the vulnerable version of the code on version from 3rd of May 2023. With version from 4th of February 2021
+it was additionally able to detect the vulnerability only in project \emph{dash}, still missing the other three affected projects.
+
+% 23/05/03
+% valid - BTCgold - T I
+% valid - doge, dash, litecoin, raven-qt - T II
+% valid - pigeon, BTCabc,  - T III missing params, reordered params
+% invalid - qtum - upper ctx diverged, patch applied T II - qtum-qt
+% 23/05/03 BTCsv, zcash, zen -- no Qt at all
+% Simian - detected only BTCGPU
+% Simian - no support for Go
+
+% 22/05/06
+% valid BTCabc, BTCgold, doge, dash, litecoin, pigeon, qtum
+% valid Raven - T II
+% SIMIAN detected only BTCGPU
+
+% 21/02/04
+% digi T II valid - not applied
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|l|c|c|c|}
+    \hline
+    CVE-2018-17144 & \multicolumn{3}{|c|}{Patch application status over date} \\
+    \hline
+    \multicolumn{1}{|c|}{Project} & 18/09/14 & 18/09/19 & 23/05/03 \\
+    \hline
+    bitcoin-abc & & &  \\  % no clone
+    \hline
+    bitcoin-sv & & & \\  % no clone
+    \hline
+    BTCGPU & \stimes & \checkmark & \checkmark \\  % T I & & T I
+    \hline
+    dash & \cellcolor{red!25} &  & \checkmark \\  % T I & T III/IV? & T III fixed?
+    \hline
+    dogecoin & \stimes & \checkmark & \checkmark \\  % T I & & T I & T I
+    %\hline
+    %digibyte & \stimes & \stimes & \checkmark \\  % T I
+    \hline
+    litecoin & \stimes & \checkmark &  \\  % T I & T I
+    \hline
+    pigeoncoin & \cellcolor{red!25} & \cellcolor{red!25} & \cellcolor{red!25}\stimes \\  % T I
+    \hline
+    Ravencoin & \stimes & \checkmark &  \\  % T III & T III &
+    \hline
+    qtum & \cellcolor{red!25} & \checkmark & \\  % T I & T I
+    \hline
+    zcash & \cellcolor{red!25} & & \\  % T III
+    \hline
+    zen & \cellcolor{red!25} & & \\  % T III
+    \hline
+  \end{tabular}
+  \caption{Detection results for CVE-2018-17144 over various versions of the analysed projects.}
+  \label{tab:results-cve-17144}
+\end{table}
+
+An \emph{Inflation bug} was chosen for the second detailed experiment. The bug was discovered alongside Denial-of-Service weakness
+in \emph{Bitcoin} and was described in Section~\ref{sec:example-cloned-vuln}. The vulnerability was assigned the identifier
+CVE-2018-17144\footnote{\href{https://nvd.nist.gov/vuln/detail/CVE-2018-17144}{https://nvd.nist.gov/vuln/detail/CVE-2018-17144}}.
+The experiments were done with various versions of the projects and the most interesting are contained
+in Table~\ref{tab:results-cve-17144}. The dates in the table refer to the date before publication of the CVE record, the date
+of publication and the date of experimentation.
+
+The results of the tool on this vulnerability are worse in comparison to the previous vulnerability. The reason is that the projects where
+the clone was not detected used a version where the context of the vulnerable code contained too many adjustments (\texttt{d1dee20547}) despite the affected code being present. Simian detected additionally
+the flaw in projects \emph{dash} and \emph{pigeoncoin}, although missed \emph{Ravencoin} which contained a clone of Type~III
+on the 14th of September 2018. On the other side, projects \emph{bitcoin-abc} and \emph{bitcoin-sv} did not clone the affected
+code.
+
+To the 3rd of May 2023, most of the repositories already patched the vulnerability using different solutions, thus syntactical
+clones were mostly not found, which makes the original patch outdated. Additionally, the original patch contained a~change only on
+a single line of code\footnote{\href{https://github.com/bitcoin/bitcoin/pull/14249/commits/d1dee20547}
+{https://github.com/bitcoin/bitcoin/pull/14249/commits/d1dee20547}}, specifically changing
+value of parameter from \texttt{true} to \texttt{false}. In this case, the similarity-based method would require more strict rules, to pay closer attention to the specific changes.
+The lack of precision resulted in a false negative detection in project \emph{pigeoncoin}, as the vulnerability was
+patched here using different logic. Extended context was used also in the case of \emph{qtum}, \emph{zcash}
+and \emph{zen}.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|c|}
+         \hline
+         Vulnerability & Method             & TP & TN & FP & FN & Date \\
+         \hline
+         \multirow{4}{*}{CVE-2019-15947} &BS & 4 & 7 & 1 & & \multirow{2}{*}{23/05/03} \\  % T Is - FP upper context modified
+                                         &SA & 4 & 8 &   & & \\%23/05/03 \\  % T Is
+                                         \cline{2-7}
+                                         &BS & 8 & 2 &   & & \multirow{2}{*}{20/04/01} \\
+                                         &SA & 8 & 4 &   & & \\ %20/04/01 \\
+                                         \hline
+         \multirow{4}{*}{CVE-2018-17145} &BS & 1 & 7 &   & & \multirow{2}{*}{23/05/03} \\  % T III png
+                                         &SA &   & 11  &   & 1 & \\ %23/05/03 \\
+                                         \cline{2-7}
+                                         &BS & 2 & 5 &   & 1 & \multirow{2}{*}{20/04/01} \\ % T III rvn & pgn, FP dash missing missing UP
+                                         &SA & 1 & 9 &   & 2 & \\%20/04/01 \\ % FN rvn & png
+         \hline
+    \end{tabular}
+    \caption{Evaluation of both implemented detection methods on CVE-2019-15947 and CVE-2018-17145.}
+    \label{tab:results-quant}
+\end{table}
+
+Summarized detection results comparing the two implemented detection methods for another two vulnerabilities are contained in
+Table~\ref{tab:results-quant}. Column \emph{TP} represents true positive detections -- the vulnerable code was correctly detected,
+column \emph{TN} represents true negative results -- repository does not contain vulnerable code, and columns \emph{FP} and \emph{FN} represent
+corresponding false results. The particular methods are marked as \emph{BS}, which refers to the BlockScope-based method, and \emph{SA}
+which stands for Simian or similarity analyser.
+
+In the case of vulnerability CVE-2019-15947, as all the detection were clones of Type~I, the tool Simian was able to perform
+slightly better. The one false positive result of the BlockScope-based method was caused by stretched candidate code because
+of the upper candidate context, which was not precisely matched.
+On the other hand, the code of vulnerability CVE-2018-17145 contained clones of Type~III as well in the forked repositories,
+which were not detected by Simian, but by BlockScope were.
+
+\subsection*{Go-Ethereum-based vulnerabilities}
+The third closely analysed vulnerability was present in project \emph{Go-Ethereum}, which is implemented in the programming language Go
+in contrary to previously analysed projects written in the programming language C++. The selected vulnerability was assigned an identification
+CVE-2022-29177\footnote{\href{https://nvd.nist.gov/vuln/detail/CVE-2022-29177}{https://nvd.nist.gov/vuln/detail/CVE-2022-29177}}
+and its exploitation could make the affected node crash. It was selected because it is the latest vulnerability in this project,
+which has a reference to the patch and is an example of complex changes discussed in relation to the discovery scan.
+The discovery scan would evaluate it as complex because the patch affects more than one file.
+
+The detection results can be found in Table~\ref{tab:results-cve-29177}.
+The first date corresponds to the fix in \emph{Go-Ethereum}, the second date indicates the CVE publication date, and the final date represents the date of this experiment.
+This vulnerability was propagated to four of five analysed projects as a clone of Type~I and the main detection method
+was able to detect it correctly, while Simian does not support this language, it needed to be configured for a plain text
+comparison.
+
+% bor - MATIC - Polygon
+% bsc - BNB - Binance
+% celo - CELO
+% subnet-evm - AVAX - Avalanche
+% optimism - OP
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|l|c|c|c|}
+    \hline
+    CVE-2022-29177 & \multicolumn{3}{|c|}{Patch application status over date} \\
+    \hline
+    \multicolumn{1}{|c|}{Project} & 22/03/07 & 22/06/20 & 23/05/03 \\
+    \hline
+    bor & \stimes & \checkmark &  \checkmark \\  % T I, T I, T I
+    \hline
+    bsc & \stimes & \checkmark & \checkmark \\  % T I, T I, T I
+    \hline
+    celo-blockchain & \stimes & \checkmark & \checkmark \\  % T I, T I, T I
+    \hline
+    optimism & \stimes & \stimes & \stimes \\  % T I, T I, T I
+    \hline
+    subnet-evm & & &  \\  % no clone
+    \hline
+  \end{tabular}
+  \caption{Detection results for CVE-2022-29177 over various versions of the analysed projects.}
+  \label{tab:results-cve-29177}
+\end{table}
+
+\vspace{-1em}
+
+\section{Evaluation}
+The detection during experimentation was executed using the implemented web interface, which was used initially to prepare
+repositories and the data set. The data set consisted of five vulnerabilities discovered in either project \emph{Bitcoin}
+or \emph{Go-Ethereum}, which covered all three types of patches -- containing only additions, only deletions, and mixed changes.
+
+Twelve projects which adopted code from \emph{Bitcoin} and five from project \emph{Go-Ethereum} were selected for experiments.
+The experiments were designed to address each vulnerability in the data set on various versions from the timeline of the forked
+projects, which was easily possible thanks to the optional parameter specifying the version date in the forked projects.
+Consequently, both available detection methods were executed and the BlockScope-based method was able to detect also clones
+of Type~II and Type~III additionally to the clones of Type~I detected by the integrated tool Simian as well.
+
+Although, the experimentation confirmed the expected shortcomings and advantages of detection methods. Simian is limited to
+the detection of Type~I clones which generated false negative detection results. The higher types of clones were covered
+by the second method, \emph{BlockScope}, utilizing textual context-based candidate code search and textual similarity-based comparison with a patch
+code for determining the vulnerability of candidate code fragments. The second method would fail at finding the right candidate
+context in the target project or due to using a relatively low threshold for the similarity between patches with minor changes
+and candidate code. The experiments resulted in two false positives and one false negative result on the prepared data set
+and over various versions from the timeline of forked projects. The two false-positive results were identified on the date
+of the experiment, which was employed for detecting all vulnerabilities. Consequently, this date was chosen for the
+calculation, resulting in an 80\% true positive rate of the implemented detection method covering the first three clone types.
+
+The possible improvements could be achieved by defining stricter rules for patches containing specific changes as it
+was in the analysis of CVE-2018-17144, where the initial patch changed only the boolean value in the function call.
+The Normalized Levenshtein edit distance metric~\cite{strsim} evaluated the vulnerable boolean value \texttt{false} more
+similar to the patched parameter with the boolean value in project \emph{pigeoncoin}, resulting in false positive detection.
+Additional extensions for the implemented tool could contain support for more file extensions to the current \texttt{.cpp}
+and \texttt{.go}, which currently helps with filtering files and comment lines.
